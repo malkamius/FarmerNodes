@@ -1,0 +1,8 @@
+*.ps1
+commit_messages.txt
+.vscode
+Bugs.txt
+*.code-workspace
+NEXT_CHANGELOG.md
+NEXT_COMMIT.txt
+wow_paths.json

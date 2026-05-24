@@ -1,0 +1,42 @@
+## Interface: 20505
+## Title: FarmerNodes
+## Notes: Tracks and displays resource nodes on the world map and minimap.
+## Author: Antigravity
+## SavedVariables: FarmerNodesDB
+## OptionalDeps: GatherMate2, GatherMate2_Data, TomTom
+## IconTexture: Interface\AddOns\FarmerNodes\farmernodes_icon.jpg
+## Version: 1.0.0
+
+# Libraries
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.xml
+Libs\HereBeDragons\HereBeDragons-2.0.lua
+Libs\HereBeDragons\HereBeDragons-Migrate.lua
+Libs\AceAddon-3.0\AceAddon-3.0.xml
+Libs\AceEvent-3.0\AceEvent-3.0.xml
+Libs\AceDB-3.0\AceDB-3.0.xml
+Libs\AceConsole-3.0\AceConsole-3.0.xml
+Libs\AceGUI-3.0\AceGUI-3.0.xml
+Libs\AceConfig-3.0\AceConfig-3.0.xml
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+
+# Core Setup
+FarmerNodes.lua
+
+# Core Module
+Core\Database.lua
+Core\Hooks.lua
+Core\Collector.lua
+
+# Display Module
+Display\WorldMap.lua
+Display\Minimap.lua
+
+# Interface Module
+UI\Importers.lua
+UI\Config.lua
+UI\MinimapButton.lua
+
+# Templates
+FarmerNodes.xml
