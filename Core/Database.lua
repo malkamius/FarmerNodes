@@ -172,11 +172,11 @@ FarmerNodes.RareNodes = {
 
 -- Default colors for track circles
 FarmerNodes.CategoryColors = {
-	["Herb Gathering"] = { Red = 0, Green = 1, Blue = 0, Alpha = 1 },
+	["Herb Gathering"] = { Red = 1, Green = 0, Blue = 0, Alpha = 1 },
 	["Mining"] = { Red = 1, Green = 0, Blue = 0, Alpha = 1 },
-	["Fishing"] = { Red = 1, Green = 1, Blue = 0, Alpha = 1 },
-	["Extract Gas"] = { Red = 0, Green = 1, Blue = 1, Alpha = 1 },
-	["Treasure"] = { Red = 1, Green = 0, Blue = 1, Alpha = 1 },
+	["Fishing"] = { Red = 1, Green = 0, Blue = 0, Alpha = 1 },
+	["Extract Gas"] = { Red = 1, Green = 0, Blue = 0, Alpha = 1 },
+	["Treasure"] = { Red = 1, Green = 0, Blue = 0, Alpha = 1 },
 }
 
 -- Built-in Blizzard UI textures for Map/Minimap pins
@@ -273,13 +273,13 @@ FarmerNodes.NodeIcons = {
 	[120] = "Interface\\Icons\\INV_Misc_Fish_17",
 
 	-- Gas
-	[301] = "Interface\\Icons\\Spell_Nature_Earthquake",
-	[302] = "Interface\\Icons\\Spell_Nature_AuraPoison",
-	[303] = "Interface\\Icons\\Spell_Nature_AstralRecalGroup",
-	[304] = "Interface\\Icons\\Spell_Shadow_AuraOfDarkness",
-	[305] = "Interface\\Icons\\Spell_Fire_WindBlast",
-	[306] = "Interface\\Icons\\Spell_Fire_SelfDestruct",
-	[307] = "Interface\\Icons\\Spell_Frost_Glaciation",
+	[301] = "Interface\\Icons\\INV_Elemental_Mote_Air01",
+	[302] = "Interface\\Icons\\INV_Elemental_Mote_Water01",
+	[303] = "Interface\\Icons\\INV_Elemental_Mote_Mana01",
+	[304] = "Interface\\Icons\\INV_Elemental_Mote_Shadow01",
+	[305] = "Interface\\Icons\\INV_Elemental_Mote_Fire01",
+	[306] = "Interface\\Icons\\INV_Elemental_Mote_Fire01",
+	[307] = "Interface\\Icons\\INV_Elemental_Mote_Water01",
 
 	-- Treasure
 	[501] = "Interface\\Icons\\INV_Misc_Clam_01",

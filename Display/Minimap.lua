@@ -20,6 +20,20 @@ local minimapSizes = {
 	}
 }
 
+local function GetMinimapRadius()
+	if C_Minimap and C_Minimap.GetViewRadius then
+		return C_Minimap.GetViewRadius()
+	end
+	local zoom = Minimap:GetZoom()
+	local indoorsState
+	if C_Minimap and C_Minimap.IsIndoors then
+		indoorsState = C_Minimap.IsIndoors() and "indoor" or "outdoor"
+	else
+		indoorsState = GetCVar("minimapZoom")+0 == Minimap:GetZoom() and "outdoor" or "indoor"
+	end
+	return (minimapSizes[indoorsState][zoom] or 150) / 2
+end
+
 -- Check if a category should be displayed based on user configurations
 local function IsCategoryVisible(category)
 	local state = FarmerNodes.db.profile.showCategories[category]
@@ -100,6 +114,12 @@ function MinimapModule:GetMinimapPin(coord, nodeID, category, count)
 		local tex = pin:CreateTexture(nil, "OVERLAY")
 		tex:SetAllPoints(pin)
 		pin.texture = tex
+
+		local mask = pin:CreateMaskTexture()
+		mask:SetAllPoints(tex)
+		mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+		tex:AddMaskTexture(mask)
+		pin.mask = mask
 
 		local countText = pin:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
 		countText:SetPoint("BOTTOMRIGHT", pin, "BOTTOMRIGHT", 2, -2)
@@ -196,15 +216,7 @@ function MinimapModule:UpdateMiniMap(force)
 	end
 	zoneID = currentZone
 
-	-- Get zoom & indoor state
-	local zoom = Minimap:GetZoom()
-	if C_Minimap and C_Minimap.IsIndoors then
-		indoors = C_Minimap.IsIndoors() and "indoor" or "outdoor"
-	else
-		indoors = GetCVar("minimapZoom")+0 == Minimap:GetZoom() and "outdoor" or "indoor"
-	end
-
-	mapRadius = (minimapSizes[indoors][zoom] or 150) / 2
+	mapRadius = GetMinimapRadius()
 
 	-- Skip if player has not moved or updated zoom/zone
 	local playerWorldX, playerWorldY = FarmerNodes.HBD:GetPlayerWorldPosition()
@@ -267,13 +279,15 @@ function MinimapModule:UpdateMiniMap(force)
 end
 
 function MinimapModule:UpdatePinPositions(force)
-	if not lastPX or not lastPY then return end
-
 	local playerWorldX, playerWorldY = FarmerNodes.HBD:GetPlayerWorldPosition()
+	if not playerWorldX or not playerWorldY then return end
+
 	local facing = GetPlayerFacing() or 0
 	local rotateMinimap = GetCVar("rotateMinimap") == "1"
 	local scale = FarmerNodes.db.profile.minimapScale or 1.0
 	local alpha = FarmerNodes.db.profile.minimapAlpha or 0.6
+	
+	mapRadius = GetMinimapRadius()
 
 	if not force and playerWorldX == lastPX and playerWorldY == lastPY and facing == lastFacing then
 		return
@@ -300,9 +314,16 @@ function MinimapModule:UpdatePinPositions(force)
 		-- Adjust pin visuals
 		if distSq <= trackDistSq then
 			pin.texture:SetTexture("Interface\\Minimap\\UI-Minimap-Ping-Center")
-			local color = FarmerNodes.CategoryColors[pin.category]
-			pin.texture:SetVertexColor(color.Red, color.Green, color.Blue, color.Alpha)
-			local circleScale = FarmerNodes.db.profile.minimapCircleScale or 1.0
+			
+			local profile = FarmerNodes.db.profile
+			local r, g, b, a = 1, 0, 0, 1
+			if profile.circleColors and profile.circleColors[pin.category] then
+				local c = profile.circleColors[pin.category]
+				r, g, b, a = c.r, c.g, c.b, c.a
+			end
+			pin.texture:SetVertexColor(r, g, b, a)
+			
+			local circleScale = profile.minimapCircleScale or 1.0
 			pin:SetSize(10 * scale * circleScale, 10 * scale * circleScale)
 			if pin.countText then
 				pin.countText:Hide()
@@ -342,7 +363,7 @@ function MinimapModule:UpdatePinPositions(force)
 			pin:Hide()
 		else
 			pin:ClearAllPoints()
-			pin:SetPoint("CENTER", Minimap, "CENTER", diffX * minimapWidth, -diffY * minimapHeight)
+			pin:SetPoint("CENTER", Minimap, "CENTER", diffX * minimapWidth + 1.5, -diffY * minimapHeight + 1.5)
 			pin:Show()
 		end
 	end

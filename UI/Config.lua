@@ -5,6 +5,17 @@ local function GetProfile()
 	return FarmerNodes.db.profile
 end
 
+local function GetCircleColor(category)
+	local profile = GetProfile()
+	if not profile.circleColors then
+		profile.circleColors = {}
+	end
+	if not profile.circleColors[category] then
+		profile.circleColors[category] = { r = 1, g = 0, b = 0, a = 1 }
+	end
+	return profile.circleColors[category]
+end
+
 local options = {
 	name = "FarmerNodes",
 	type = "group",
@@ -402,6 +413,22 @@ local function BuildCategoryOptions()
 			get = function() return GetProfile().dbLocks[category] end,
 			set = function(_, val) GetProfile().dbLocks[category] = val end,
 			order = orderIdx + 2,
+		}
+		catArgs[category .. "_color"] = {
+			name = "Minimap Circle Color",
+			desc = "Set the color of the tracking circle indicator for this category on the minimap.",
+			type = "color",
+			hasAlpha = true,
+			get = function()
+				local c = GetCircleColor(category)
+				return c.r, c.g, c.b, c.a
+			end,
+			set = function(_, r, g, b, a)
+				local c = GetCircleColor(category)
+				c.r, c.g, c.b, c.a = r, g, b, a
+				FarmerNodes:OnConfigChanged()
+			end,
+			order = orderIdx + 3,
 		}
 
 		-- Imports Settings

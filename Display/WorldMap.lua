@@ -104,7 +104,7 @@ function WorldMapModule.WorldMapDataProvider:RefreshAllData(fromOnShow)
 							end
 
 							-- 1. Create a cluster center pin
-							local centerPin = map:AcquirePin("FarmerNodesWorldMapPinTemplate", clusterEncoded, maxNodeID, category, mapID, maxCount, true)
+							local centerPin = map:AcquirePin("FarmerNodesWorldMapPinTemplate", clusterEncoded, maxNodeID, category, mapID, count, true)
 							centerPin.childPins = centerPin.childPins or {}
 							wipe(centerPin.childPins)
 							table.insert(worldmapPins, centerPin)
@@ -163,6 +163,12 @@ FarmerNodesWorldMapPinMixin = CreateFromMixins(MapCanvasPinMixin)
 function FarmerNodesWorldMapPinMixin:OnLoad()
 	self:UseFrameLevelType("PIN_FRAME_LEVEL_AREA_POI")
 	self:SetScalingLimits(1, 1.0, 1.2)
+
+	local mask = self:CreateMaskTexture()
+	mask:SetAllPoints(self.texture)
+	mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+	self.texture:AddMaskTexture(mask)
+	self.mask = mask
 end
 
 local function UpdateClusterVisibility(centerPin)
@@ -254,7 +260,7 @@ function FarmerNodesWorldMapPinMixin:OnAcquired(coord, nodeID, category, zone, c
 	local showLines = FarmerNodes.db.profile.showConnectionLines ~= false
 	if self.parentClusterPin and showLines then
 		if not self.line then
-			self.line = self:GetMap():GetCanvas():CreateLine(nil, "OVERLAY")
+			self.line = self:GetParent():CreateLine(nil, "OVERLAY")
 		end
 		self.line:SetThickness(1.2)
 		self.line:SetStartPoint("CENTER", self)
@@ -326,23 +332,24 @@ function FarmerNodesWorldMapPinMixin:ShowClusterRadiusCircle()
 
 	if profile.showClusterRadius and R > 0 and yw and yw > 0 then
 		if not self.radiusCircle then
-			self.radiusCircle = CreateFrame("Frame", nil, self:GetMap():GetCanvas())
-			local texture = self.radiusCircle:CreateTexture(nil, "BACKGROUND")
+			self.radiusCircle = CreateFrame("Frame", nil, self:GetParent())
+			local texture = self.radiusCircle:CreateTexture(nil, "ARTWORK")
 			texture:SetTexture("Interface\\Minimap\\UI-Minimap-Ping-Center")
 			texture:SetAllPoints(self.radiusCircle)
 			self.radiusCircle.texture = texture
 		end
+		self.radiusCircle:SetFrameLevel(self:GetFrameLevel() - 1)
 		
-		local canvasWidth = self:GetMap():GetCanvas():GetWidth()
-		local S = (2 * R / yw) * canvasWidth
+		local canvasWidth = self:GetParent():GetWidth()
+		local S = (2 * R / yw) * canvasWidth * 1.2 + 15
 		
 		self.radiusCircle:ClearAllPoints()
 		self.radiusCircle:SetPoint("CENTER", self, "CENTER", 0, 0)
 		self.radiusCircle:SetSize(S, S)
 		
-		local color = FarmerNodes.CategoryColors[self.category] or { Red = 1, Green = 1, Blue = 1, Alpha = 1 }
+		local r, g, b = 0, 1, 0 -- Green color for cluster hover radius
 		local alpha = profile.clusterCircleAlpha or 0.15
-		self.radiusCircle.texture:SetVertexColor(color.Red, color.Green, color.Blue, alpha)
+		self.radiusCircle.texture:SetVertexColor(r, g, b, alpha)
 		self.radiusCircle:Show()
 	end
 end

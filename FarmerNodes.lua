@@ -40,6 +40,13 @@ local defaults = {
 			["Extract Gas"] = "always",
 			["Treasure"] = "always",
 		},
+		circleColors = {
+			["Mining"] = { r = 1, g = 0, b = 0, a = 1 },
+			["Herb Gathering"] = { r = 1, g = 0, b = 0, a = 1 },
+			["Fishing"] = { r = 1, g = 0, b = 0, a = 1 },
+			["Extract Gas"] = { r = 1, g = 0, b = 0, a = 1 },
+			["Treasure"] = { r = 1, g = 0, b = 0, a = 1 },
+		},
 		minimapButton = {
 			hide = false,
 			showBorder = true,
