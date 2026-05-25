@@ -74,14 +74,83 @@ function WorldMapModule.WorldMapDataProvider:RefreshAllData(fromOnShow)
 	local mapID = map:GetMapID()
 	if not mapID then return end
 
-	-- Query all coordinates for the current map
-	for category, zoneNodes in pairs(FarmerNodesDB.nodes) do
-		if IsCategoryVisible(category) then
-			local coords = zoneNodes[mapID]
-			if coords then
-				for encoded, nodeID in pairs(coords) do
-					local pin = map:AcquirePin("FarmerNodesWorldMapPinTemplate", encoded, nodeID, category, mapID)
-					table.insert(worldmapPins, pin)
+	local enableGrouping = FarmerNodes.db.profile.enableGrouping
+
+	if enableGrouping then
+		-- Grouped rendering: break out sub-nodes
+		for category, zoneClusters in pairs(FarmerNodesDB.clustered) do
+			if IsCategoryVisible(category) then
+				local clusters = zoneClusters[mapID]
+				if clusters then
+					for clusterEncoded, nodeID in pairs(clusters) do
+						local count = 1
+						if FarmerNodesDB.clusterCounts[category] and FarmerNodesDB.clusterCounts[category][mapID] then
+							count = FarmerNodesDB.clusterCounts[category][mapID][clusterEncoded] or 1
+						end
+						local subNodes = FarmerNodesDB.clusterSubNodes[category] and FarmerNodesDB.clusterSubNodes[category][mapID] and FarmerNodesDB.clusterSubNodes[category][mapID][clusterEncoded]
+
+						if count > 1 and subNodes then
+							-- Find most common node in cluster
+							local nodeCounts = {}
+							local maxCount = 0
+							local maxNodeID = nodeID
+							for _, subNode in ipairs(subNodes) do
+								local subNodeID = subNode[2]
+								nodeCounts[subNodeID] = (nodeCounts[subNodeID] or 0) + 1
+								if nodeCounts[subNodeID] > maxCount then
+									maxCount = nodeCounts[subNodeID]
+									maxNodeID = subNodeID
+								end
+							end
+
+							-- 1. Create a cluster center pin
+							local centerPin = map:AcquirePin("FarmerNodesWorldMapPinTemplate", clusterEncoded, maxNodeID, category, mapID, maxCount, true)
+							centerPin.childPins = centerPin.childPins or {}
+							wipe(centerPin.childPins)
+							table.insert(worldmapPins, centerPin)
+
+							-- Build multi-line tooltip info for each node type in the cluster
+							centerPin.clusterTooltipLines = centerPin.clusterTooltipLines or {}
+							wipe(centerPin.clusterTooltipLines)
+							local sortedNodes = {}
+							for subNodeID, sCount in pairs(nodeCounts) do
+								table.insert(sortedNodes, { id = subNodeID, count = sCount })
+							end
+							table.sort(sortedNodes, function(a, b) return a.count > b.count end)
+
+							for _, item in ipairs(sortedNodes) do
+								local displayID = FarmerNodes:GetDisplayNode(category, item.id, mapID)
+								local nodeName = FarmerNodes.ReverseNodeIDs[category][displayID] or category
+								table.insert(centerPin.clusterTooltipLines, string.format("%s (x%d)", nodeName, item.count))
+							end
+
+							-- 2. Create sub-node pins connected to this center pin
+							for _, subNode in ipairs(subNodes) do
+								local subEncoded = subNode[1]
+								local subNodeID = subNode[2]
+								local subPin = map:AcquirePin("FarmerNodesWorldMapPinTemplate", subEncoded, subNodeID, category, mapID, 1, false, centerPin)
+								table.insert(centerPin.childPins, subPin)
+								table.insert(worldmapPins, subPin)
+							end
+						else
+							-- Single-node cluster, render normally
+							local pin = map:AcquirePin("FarmerNodesWorldMapPinTemplate", clusterEncoded, nodeID, category, mapID, 1, false)
+							table.insert(worldmapPins, pin)
+						end
+					end
+				end
+			end
+		end
+	else
+		-- Non-grouped: Query all raw coordinates for the current map
+		for category, zoneNodes in pairs(FarmerNodesDB.nodes) do
+			if IsCategoryVisible(category) then
+				local coords = zoneNodes[mapID]
+				if coords then
+					for encoded, nodeID in pairs(coords) do
+						local pin = map:AcquirePin("FarmerNodesWorldMapPinTemplate", encoded, nodeID, category, mapID, 1, false)
+						table.insert(worldmapPins, pin)
+					end
 				end
 			end
 		end
@@ -96,22 +165,112 @@ function FarmerNodesWorldMapPinMixin:OnLoad()
 	self:SetScalingLimits(1, 1.0, 1.2)
 end
 
-function FarmerNodesWorldMapPinMixin:OnAcquired(coord, nodeID, category, zone)
+local function UpdateClusterVisibility(centerPin)
+	if not centerPin or not centerPin:IsShown() then return end
+	local isHovered = centerPin:IsMouseOver()
+	if not isHovered and centerPin.childPins then
+		for _, subPin in ipairs(centerPin.childPins) do
+			if subPin:IsMouseOver() then
+				isHovered = true
+				break
+			end
+		end
+	end
+
+	if isHovered then
+		if centerPin.childPins then
+			for _, subPin in ipairs(centerPin.childPins) do
+				subPin:Show()
+				if subPin.line then
+					subPin.line:Show()
+				end
+			end
+		end
+		if FarmerNodes.db.profile.showClusterRadius then
+			centerPin:ShowClusterRadiusCircle()
+		end
+	else
+		if centerPin.childPins then
+			for _, subPin in ipairs(centerPin.childPins) do
+				subPin:Hide()
+				if subPin.line then
+					subPin.line:Hide()
+				end
+			end
+		end
+		centerPin:HideClusterRadiusCircle()
+	end
+end
+
+function FarmerNodesWorldMapPinMixin:OnAcquired(coord, nodeID, category, zone, count, isClusterCenter, parentClusterPin)
 	self.coord = coord
 	self.nodeID = nodeID
 	self.category = category
 	self.zone = zone
-	local displayID = FarmerNodes:GetDisplayNode(category, nodeID, zone)
-	self.title = FarmerNodes.ReverseNodeIDs[category][displayID] or category
+	self.count = count or 1
+	self.isClusterCenter = isClusterCenter
+	self.parentClusterPin = parentClusterPin
 
 	local x, y = FarmerNodes:DecodeLoc(coord)
 	self:SetPosition(x, y)
 
 	local scale = FarmerNodes.db.profile.worldmapScale or 1.0
-	self:SetSize(12 * scale, 12 * scale)
 
-	self.texture:SetTexture(FarmerNodes:GetNodeIcon(category, nodeID, zone))
+	if self.isClusterCenter then
+		-- It's a cluster center indicator
+		local displayID = FarmerNodes:GetDisplayNode(category, nodeID, zone)
+		self.title = FarmerNodes.ReverseNodeIDs[category][displayID] or category
+		if self.count > 1 then
+			self.title = string.format("%s (x%d)", self.title, self.count)
+		end
+		self:SetSize(12 * scale, 12 * scale)
+		self.texture:SetTexture(FarmerNodes:GetNodeIcon(category, nodeID, zone))
+		self.texture:SetVertexColor(1, 1, 1, 1) -- Reset color
+		
+		if self.countText then
+			if self.count > 1 then
+				self.countText:SetText(self.count)
+				self.countText:Show()
+			else
+				self.countText:Hide()
+			end
+		end
+	else
+		-- It's a normal node or sub-node
+		local displayID = FarmerNodes:GetDisplayNode(category, nodeID, zone)
+		self.title = FarmerNodes.ReverseNodeIDs[category][displayID] or category
+		self:SetSize(12 * scale, 12 * scale)
+		self.texture:SetTexture(FarmerNodes:GetNodeIcon(category, nodeID, zone))
+		self.texture:SetVertexColor(1, 1, 1, 1) -- Reset color
+
+		if self.countText then
+			self.countText:Hide()
+		end
+	end
+
 	self:EnableMouse(FarmerNodes.db.profile.worldMapIconsInteractive)
+
+	-- Handle the thin green line to cluster point
+	local showLines = FarmerNodes.db.profile.showConnectionLines ~= false
+	if self.parentClusterPin and showLines then
+		if not self.line then
+			self.line = self:GetMap():GetCanvas():CreateLine(nil, "OVERLAY")
+		end
+		self.line:SetThickness(1.2)
+		self.line:SetStartPoint("CENTER", self)
+		self.line:SetEndPoint("CENTER", self.parentClusterPin)
+		self.line:SetColorTexture(0, 1, 0, 0.6) -- Green line with some transparency
+		self.line:Hide() -- Hide initially
+	else
+		if self.line then
+			self.line:Hide()
+		end
+	end
+
+	-- If this is a sub-node, hide it initially
+	if self.parentClusterPin then
+		self:Hide()
+	end
 
 	-- Fire developer hook
 	FarmerNodes:DispatchEvent("OnPinCreated", self, category, nodeID, "worldmap")
@@ -119,12 +278,79 @@ end
 
 function FarmerNodesWorldMapPinMixin:OnMouseEnter()
 	GameTooltip:SetOwner(self, "ANCHOR_CURSOR")
-	GameTooltip:SetText(self.title, 1, 1, 1)
+	if self.isClusterCenter and self.clusterTooltipLines and #self.clusterTooltipLines > 0 then
+		GameTooltip:AddLine("Cluster Details", 1, 0.82, 0) -- Gold header
+		for _, line in ipairs(self.clusterTooltipLines) do
+			GameTooltip:AddLine(line, 1, 1, 1)
+		end
+	else
+		GameTooltip:SetText(self.title, 1, 1, 1)
+	end
 	GameTooltip:Show()
+
+	local center = self.isClusterCenter and self or self.parentClusterPin
+	if center then
+		UpdateClusterVisibility(center)
+	end
 end
 
 function FarmerNodesWorldMapPinMixin:OnMouseLeave()
 	GameTooltip:Hide()
+	local center = self.isClusterCenter and self or self.parentClusterPin
+	if center then
+		C_Timer.After(0.05, function()
+			UpdateClusterVisibility(center)
+		end)
+	end
+end
+
+function FarmerNodesWorldMapPinMixin:OnReleased()
+	if self.isClusterCenter then
+		self:HideClusterRadiusCircle()
+		if self.childPins then
+			wipe(self.childPins)
+		end
+		if self.clusterTooltipLines then
+			wipe(self.clusterTooltipLines)
+		end
+	end
+	if self.line then
+		self.line:Hide()
+	end
+end
+
+function FarmerNodesWorldMapPinMixin:ShowClusterRadiusCircle()
+	local profile = FarmerNodes.db.profile
+	local R = FarmerNodesDB.clusterRadii[self.category] and FarmerNodesDB.clusterRadii[self.category][self.zone] and FarmerNodesDB.clusterRadii[self.category][self.zone][self.coord] or 0
+	local yw, yh = FarmerNodes.HBD:GetZoneSize(self.zone)
+
+	if profile.showClusterRadius and R > 0 and yw and yw > 0 then
+		if not self.radiusCircle then
+			self.radiusCircle = CreateFrame("Frame", nil, self:GetMap():GetCanvas())
+			local texture = self.radiusCircle:CreateTexture(nil, "BACKGROUND")
+			texture:SetTexture("Interface\\Minimap\\UI-Minimap-Ping-Center")
+			texture:SetAllPoints(self.radiusCircle)
+			self.radiusCircle.texture = texture
+		end
+		
+		local canvasWidth = self:GetMap():GetCanvas():GetWidth()
+		local S = (2 * R / yw) * canvasWidth
+		
+		self.radiusCircle:ClearAllPoints()
+		self.radiusCircle:SetPoint("CENTER", self, "CENTER", 0, 0)
+		self.radiusCircle:SetSize(S, S)
+		
+		local color = FarmerNodes.CategoryColors[self.category] or { Red = 1, Green = 1, Blue = 1, Alpha = 1 }
+		local alpha = profile.clusterCircleAlpha or 0.15
+		self.radiusCircle.texture:SetVertexColor(color.Red, color.Green, color.Blue, alpha)
+		self.radiusCircle:Show()
+	end
+end
+
+function FarmerNodesWorldMapPinMixin:HideClusterRadiusCircle()
+	if self.radiusCircle then
+		self.radiusCircle:Hide()
+	end
 end
 
 function FarmerNodesWorldMapPinMixin:OnMouseDown(button)

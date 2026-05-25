@@ -55,7 +55,9 @@ end
 -- Public query: returns nodes in a specific zone ID
 function FarmerNodes:GetNodesInZone(zoneID, category)
 	if not zoneID or not category then return nil end
-	local catNodes = FarmerNodesDB.nodes[category]
+	local enableGrouping = self.db and self.db.profile and self.db.profile.enableGrouping
+	local nodesTable = enableGrouping and FarmerNodesDB.clustered or FarmerNodesDB.nodes
+	local catNodes = nodesTable[category]
 	if catNodes then
 		return catNodes[zoneID]
 	end

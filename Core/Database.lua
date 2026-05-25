@@ -521,6 +521,9 @@ function Database:AddNode(zoneID, x, y, category, nodeName)
 	FarmerNodesDB.nodes[category][zoneID] = FarmerNodesDB.nodes[category][zoneID] or {}
 	FarmerNodesDB.nodes[category][zoneID][encoded] = nodeID
 
+	-- Hook recalculation
+	self:RecalculateClusters(category, zoneID)
+
 	-- Dispatch hook event
 	FarmerNodes:DispatchEvent("OnDatabaseUpdated", zoneID, category, encoded, nodeID, "ADD")
 	FarmerNodes:SendMessage("FarmerNodes_NodeAdded", zoneID, category, encoded, nodeName)
@@ -587,6 +590,8 @@ function Database:DeleteNode(zoneID, category, encoded)
 	if db and db[encoded] then
 		local nodeID = db[encoded]
 		db[encoded] = nil
+		-- Hook recalculation
+		self:RecalculateClusters(category, zoneID)
 		FarmerNodes:DispatchEvent("OnDatabaseUpdated", zoneID, category, encoded, nodeID, "DELETE")
 		FarmerNodes:SendMessage("FarmerNodes_NodeDeleted", zoneID, category, encoded)
 		FarmerNodes:SendMessage("FarmerNodes_DataChanged")
@@ -626,11 +631,278 @@ function Database:SweepDatabase()
 						coords[c] = nil
 						FarmerNodes:DispatchEvent("OnDatabaseUpdated", zoneID, category, c, oldID, "DELETE")
 					end
+					if next(toRemove) then
+						self:RecalculateClusters(category, zoneID)
+					end
 				end
 			end
 		end
 	end
 	FarmerNodes:SendMessage("FarmerNodes_DataChanged")
+end
+
+-- Recalculates clusters for a specific category and zone ID
+function Database:RecalculateClusters(category, zoneID)
+	if not FarmerNodes.db.profile.enableGrouping then return end
+	self:ClusterZoneCategory(category, zoneID)
+end
+
+-- Rebuilds clusters for a specific category across all zones
+function Database:RebuildCategoryClusters(category)
+	FarmerNodesDB.clustered = FarmerNodesDB.clustered or {}
+	FarmerNodesDB.clustered[category] = {}
+	FarmerNodesDB.clusterCounts = FarmerNodesDB.clusterCounts or {}
+	FarmerNodesDB.clusterCounts[category] = {}
+	FarmerNodesDB.clusterRadii = FarmerNodesDB.clusterRadii or {}
+	FarmerNodesDB.clusterRadii[category] = {}
+	FarmerNodesDB.clusterSubNodes = FarmerNodesDB.clusterSubNodes or {}
+	FarmerNodesDB.clusterSubNodes[category] = {}
+	if FarmerNodesDB.nodes[category] then
+		for zoneID in pairs(FarmerNodesDB.nodes[category]) do
+			self:ClusterZoneCategory(category, zoneID)
+		end
+	end
+end
+
+-- Rebuilds all clusters across all categories and zones
+function Database:RebuildAllClusters()
+	FarmerNodesDB.clustered = {}
+	FarmerNodesDB.clusterCounts = {}
+	FarmerNodesDB.clusterRadii = {}
+	FarmerNodesDB.clusterSubNodes = {}
+	
+	for category in pairs(FarmerNodes.Categories) do
+		self:RebuildCategoryClusters(category)
+	end
+end
+
+-- Perform single-linkage agglomerative clustering in a specific zone and category
+function Database:ClusterZoneCategory(category, zoneID)
+	local zoneNodes = FarmerNodesDB.nodes[category] and FarmerNodesDB.nodes[category][zoneID]
+	if not zoneNodes or not next(zoneNodes) then
+		if FarmerNodesDB.clustered and FarmerNodesDB.clustered[category] then
+			FarmerNodesDB.clustered[category][zoneID] = nil
+		end
+		if FarmerNodesDB.clusterCounts and FarmerNodesDB.clusterCounts[category] then
+			FarmerNodesDB.clusterCounts[category][zoneID] = nil
+		end
+		if FarmerNodesDB.clusterRadii and FarmerNodesDB.clusterRadii[category] then
+			FarmerNodesDB.clusterRadii[category][zoneID] = nil
+		end
+		if FarmerNodesDB.clusterSubNodes and FarmerNodesDB.clusterSubNodes[category] then
+			FarmerNodesDB.clusterSubNodes[category][zoneID] = nil
+		end
+		return
+	end
+
+	local yw, yh = FarmerNodes.HBD:GetZoneSize(zoneID)
+	if not yw or yw <= 0 or not yh or yh <= 0 then
+		-- Fallback: If HBD doesn't return zone sizes, we can't calculate distance in yards.
+		-- Just copy raw nodes over directly.
+		FarmerNodesDB.clustered[category] = FarmerNodesDB.clustered[category] or {}
+		FarmerNodesDB.clustered[category][zoneID] = {}
+		FarmerNodesDB.clusterCounts[category] = FarmerNodesDB.clusterCounts[category] or {}
+		FarmerNodesDB.clusterCounts[category][zoneID] = {}
+		FarmerNodesDB.clusterRadii[category] = FarmerNodesDB.clusterRadii[category] or {}
+		FarmerNodesDB.clusterRadii[category][zoneID] = {}
+		FarmerNodesDB.clusterSubNodes[category] = FarmerNodesDB.clusterSubNodes[category] or {}
+		FarmerNodesDB.clusterSubNodes[category][zoneID] = {}
+		
+		for encoded, nodeID in pairs(zoneNodes) do
+			FarmerNodesDB.clustered[category][zoneID][encoded] = nodeID
+			FarmerNodesDB.clusterCounts[category][zoneID][encoded] = 1
+			FarmerNodesDB.clusterRadii[category][zoneID][encoded] = 0
+			FarmerNodesDB.clusterSubNodes[category][zoneID][encoded] = { { encoded, nodeID } }
+		end
+		return
+	end
+
+	-- Build points list
+	local points = {}
+	for encoded, nodeID in pairs(zoneNodes) do
+		local x, y = FarmerNodes:DecodeLoc(encoded)
+		local wx, wy = FarmerNodes.HBD:GetWorldCoordinatesFromZone(x, y, zoneID)
+		if wx and wy then
+			table.insert(points, {
+				encoded = encoded,
+				nodeID = nodeID,
+				x = x,
+				y = y,
+				wx = wx,
+				wy = wy,
+			})
+		end
+	end
+
+	if #points == 0 then return end
+
+	local groupingRange = FarmerNodes.db.profile.groupingRange or 30
+	local clusterSeparation = FarmerNodes.db.profile.clusterSeparation or 50
+	local clusterSameTypeOnly = FarmerNodes.db.profile.clusterSameTypeOnly or false
+
+	-- Step 1 & 2: Single Linkage Clustering (union-find)
+	local parent = {}
+	for i = 1, #points do parent[i] = i end
+
+	local function find(i)
+		local path = {}
+		while parent[i] ~= i do
+			table.insert(path, i)
+			i = parent[i]
+		end
+		for _, node in ipairs(path) do
+			parent[node] = i
+		end
+		return i
+	end
+
+	local function union(i, j)
+		local rootI = find(i)
+		local rootJ = find(j)
+		if rootI ~= rootJ then
+			parent[rootI] = rootJ
+		end
+	end
+
+	-- Union points within groupingRange
+	for i = 1, #points do
+		local p1 = points[i]
+		for j = i + 1, #points do
+			local p2 = points[j]
+			if not clusterSameTypeOnly or p1.nodeID == p2.nodeID then
+				local dx = p1.wx - p2.wx
+				local dy = p1.wy - p2.wy
+				local distSq = dx*dx + dy*dy
+				if distSq <= groupingRange * groupingRange then
+					union(i, j)
+				end
+			end
+		end
+	end
+
+	-- Construct clusters
+	local tempClusters = {}
+	for i = 1, #points do
+		local root = find(i)
+		tempClusters[root] = tempClusters[root] or { nodes = {} }
+		table.insert(tempClusters[root].nodes, points[i])
+	end
+
+	local clusters = {}
+	for _, c in pairs(tempClusters) do
+		local sumWX, sumWY = 0, 0
+		for _, node in ipairs(c.nodes) do
+			sumWX = sumWX + node.wx
+			sumWY = sumWY + node.wy
+		end
+		c.wx = sumWX / #c.nodes
+		c.wy = sumWY / #c.nodes
+		table.insert(clusters, c)
+	end
+
+	-- Step 3: Merge clusters closer than clusterSeparation
+	local merged = true
+	while merged do
+		merged = false
+		local bestI, bestJ
+		local minDistSq = clusterSeparation * clusterSeparation
+		for i = 1, #clusters do
+			local c1 = clusters[i]
+			for j = i + 1, #clusters do
+				local c2 = clusters[j]
+				if not clusterSameTypeOnly or c1.nodes[1].nodeID == c2.nodes[1].nodeID then
+					local dx = c1.wx - c2.wx
+					local dy = c1.wy - c2.wy
+					local distSq = dx*dx + dy*dy
+					if distSq < minDistSq then
+						minDistSq = distSq
+						bestI = i
+						bestJ = j
+						merged = true
+					end
+				end
+			end
+		end
+
+		if merged then
+			local c1 = clusters[bestI]
+			local c2 = clusters[bestJ]
+			for _, node in ipairs(c2.nodes) do
+				table.insert(c1.nodes, node)
+			end
+			local sumWX, sumWY = 0, 0
+			for _, node in ipairs(c1.nodes) do
+				sumWX = sumWX + node.wx
+				sumWY = sumWY + node.wy
+			end
+			c1.wx = sumWX / #c1.nodes
+			c1.wy = sumWY / #c1.nodes
+			table.remove(clusters, bestJ)
+		end
+	end
+
+	-- Step 4: Write final cluster centers and count
+	local zoneClusters = {}
+	local zoneCounts = {}
+	local zoneRadii = {}
+	local zoneSubNodes = {}
+	for _, c in ipairs(clusters) do
+		local sumX, sumY = 0, 0
+		for _, node in ipairs(c.nodes) do
+			sumX = sumX + node.x
+			sumY = sumY + node.y
+		end
+		local cx = sumX / #c.nodes
+		local cy = sumY / #c.nodes
+
+		-- Find medoid
+		local bestNode = c.nodes[1]
+		local bestDistSq = 99999999
+		for _, node in ipairs(c.nodes) do
+			local dx = node.wx - c.wx
+			local dy = node.wy - c.wy
+			local distSq = dx*dx + dy*dy
+			if distSq < bestDistSq then
+				bestDistSq = distSq
+				bestNode = node
+			end
+		end
+
+		local encoded = FarmerNodes:EncodeLoc(cx, cy)
+		zoneClusters[encoded] = bestNode.nodeID
+		zoneCounts[encoded] = #c.nodes
+
+		-- Calculate max radius in yards
+		local maxRadius = 0
+		for _, node in ipairs(c.nodes) do
+			local dx = node.wx - c.wx
+			local dy = node.wy - c.wy
+			local dist = math.sqrt(dx*dx + dy*dy)
+			if dist > maxRadius then
+				maxRadius = dist
+			end
+		end
+		zoneRadii[encoded] = maxRadius
+
+		-- Store sub-nodes compact list
+		local subNodes = {}
+		for _, node in ipairs(c.nodes) do
+			table.insert(subNodes, { node.encoded, node.nodeID })
+		end
+		zoneSubNodes[encoded] = subNodes
+	end
+
+	FarmerNodesDB.clustered[category] = FarmerNodesDB.clustered[category] or {}
+	FarmerNodesDB.clustered[category][zoneID] = zoneClusters
+
+	FarmerNodesDB.clusterCounts[category] = FarmerNodesDB.clusterCounts[category] or {}
+	FarmerNodesDB.clusterCounts[category][zoneID] = zoneCounts
+
+	FarmerNodesDB.clusterRadii[category] = FarmerNodesDB.clusterRadii[category] or {}
+	FarmerNodesDB.clusterRadii[category][zoneID] = zoneRadii
+
+	FarmerNodesDB.clusterSubNodes[category] = FarmerNodesDB.clusterSubNodes[category] or {}
+	FarmerNodesDB.clusterSubNodes[category][zoneID] = zoneSubNodes
 end
 
 -- Expose core database operations on global namespace for modular imports

@@ -86,7 +86,7 @@ end
 -- Minimap Pins Rendering
 -- ==========================================
 
-function MinimapModule:GetMinimapPin(coord, nodeID, category)
+function MinimapModule:GetMinimapPin(coord, nodeID, category, count)
 	local pin = next(pinCache)
 	if pin then
 		pinCache[pin] = nil
@@ -100,6 +100,12 @@ function MinimapModule:GetMinimapPin(coord, nodeID, category)
 		local tex = pin:CreateTexture(nil, "OVERLAY")
 		tex:SetAllPoints(pin)
 		pin.texture = tex
+
+		local countText = pin:CreateFontString(nil, "OVERLAY", "NumberFontNormalSmall")
+		countText:SetPoint("BOTTOMRIGHT", pin, "BOTTOMRIGHT", 2, -2)
+		countText:SetJustifyH("RIGHT")
+		countText:SetJustifyV("BOTTOM")
+		pin.countText = countText
 
 		pin:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 		pin:SetScript("OnEnter", function(self)
@@ -131,8 +137,22 @@ function MinimapModule:GetMinimapPin(coord, nodeID, category)
 	pin.nodeID = nodeID
 	pin.category = category
 	pin.zone = zoneID
+	pin.count = count or 1
 	local displayID = FarmerNodes:GetDisplayNode(category, nodeID, zoneID)
 	pin.title = FarmerNodes.ReverseNodeIDs[category][displayID] or category
+
+	if pin.count > 1 then
+		pin.title = string.format("%s (x%d)", pin.title, pin.count)
+	end
+
+	if pin.countText then
+		if pin.count > 1 then
+			pin.countText:SetText(pin.count)
+			pin.countText:Show()
+		else
+			pin.countText:Hide()
+		end
+	end
 
 	-- Fire developer hook
 	FarmerNodes:DispatchEvent("OnPinCreated", pin, category, nodeID, "minimap")
@@ -199,11 +219,18 @@ function MinimapModule:UpdateMiniMap(force)
 	local keepPins = {}
 
 	-- Query nearby nodes
-	for category, zoneNodes in pairs(FarmerNodesDB.nodes) do
+	local enableGrouping = FarmerNodes.db.profile.enableGrouping and not FarmerNodes.db.profile.disableMinimapCluster
+	local nodesTable = enableGrouping and FarmerNodesDB.clustered or FarmerNodesDB.nodes
+
+	for category, zoneNodes in pairs(nodesTable) do
 		if IsCategoryVisible(category) then
 			local coords = zoneNodes[zoneID]
 			if coords then
 				for encoded, nodeID in pairs(coords) do
+					local count = 1
+					if enableGrouping and FarmerNodesDB.clusterCounts[category] and FarmerNodesDB.clusterCounts[category][zoneID] then
+						count = FarmerNodesDB.clusterCounts[category][zoneID][encoded] or 1
+					end
 					local nx, ny = FarmerNodes:DecodeLoc(encoded)
 					local wx, wy = FarmerNodes.HBD:GetWorldCoordinatesFromZone(nx, ny, zoneID)
 					if wx and wy then
@@ -215,7 +242,7 @@ function MinimapModule:UpdateMiniMap(force)
 							local pinKey = category .. "_" .. encoded
 							local pin = activePins[pinKey]
 							if not pin then
-								pin = self:GetMinimapPin(encoded, nodeID, category)
+								pin = self:GetMinimapPin(encoded, nodeID, category, count)
 								pin.wx = wx
 								pin.wy = wy
 								activePins[pinKey] = pin
@@ -277,10 +304,20 @@ function MinimapModule:UpdatePinPositions(force)
 			pin.texture:SetVertexColor(color.Red, color.Green, color.Blue, color.Alpha)
 			local circleScale = FarmerNodes.db.profile.minimapCircleScale or 1.0
 			pin:SetSize(10 * scale * circleScale, 10 * scale * circleScale)
+			if pin.countText then
+				pin.countText:Hide()
+			end
 		else
 			pin.texture:SetTexture(FarmerNodes:GetNodeIcon(pin.category, pin.nodeID, zoneID))
 			pin.texture:SetVertexColor(1, 1, 1, 1)
 			pin:SetSize(12 * scale, 12 * scale)
+			if pin.countText then
+				if pin.count > 1 then
+					pin.countText:Show()
+				else
+					pin.countText:Hide()
+				end
+			end
 		end
 
 		-- Dispatch hook event on updates

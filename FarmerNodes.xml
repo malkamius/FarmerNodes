@@ -7,6 +7,13 @@
 				<Texture parentKey="texture" setAllPoints="true">
 				</Texture>
 			</Layer>
+			<Layer level="OVERLAY" textureSubLevel="1">
+				<FontString parentKey="countText" inherits="NumberFontNormalSmall" justifyH="RIGHT" justifyV="BOTTOM">
+					<Anchors>
+						<Anchor point="BOTTOMRIGHT" x="2" y="-2"/>
+					</Anchors>
+				</FontString>
+			</Layer>
 		</Layers>
 	</Frame>
 </Ui>

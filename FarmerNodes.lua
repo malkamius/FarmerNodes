@@ -17,6 +17,15 @@ local defaults = {
 		trackDistance = 15,
 		minimapTooltips = true,
 		worldMapIconsInteractive = true,
+		enableGrouping = false,
+		disableMinimapCluster = true,
+		groupingRange = 30,
+		clusterSeparation = 50,
+		clusterSameTypeOnly = false,
+		showClusterRadius = true,
+		clusterCircleAlpha = 0.15,
+		showSubNodesOnHover = true,
+		showConnectionLines = true,
 		dbLocks = {
 			["Mining"] = false,
 			["Herb Gathering"] = false,
@@ -49,6 +58,10 @@ function FarmerNodes:OnInitialize()
 	-- Load raw nodes database (persistent globally, not bound to UI profiles)
 	FarmerNodesDB = FarmerNodesDB or {}
 	FarmerNodesDB.nodes = FarmerNodesDB.nodes or {}
+	FarmerNodesDB.clustered = FarmerNodesDB.clustered or {}
+	FarmerNodesDB.clusterCounts = FarmerNodesDB.clusterCounts or {}
+	FarmerNodesDB.clusterRadii = FarmerNodesDB.clusterRadii or {}
+	FarmerNodesDB.clusterSubNodes = FarmerNodesDB.clusterSubNodes or {}
 	
 	-- Categories are initialized in Database.lua, but we check/set them here safely
 	local categories = {
@@ -60,6 +73,10 @@ function FarmerNodes:OnInitialize()
 	}
 	for category in pairs(categories) do
 		FarmerNodesDB.nodes[category] = FarmerNodesDB.nodes[category] or {}
+		FarmerNodesDB.clustered[category] = FarmerNodesDB.clustered[category] or {}
+		FarmerNodesDB.clusterCounts[category] = FarmerNodesDB.clusterCounts[category] or {}
+		FarmerNodesDB.clusterRadii[category] = FarmerNodesDB.clusterRadii[category] or {}
+		FarmerNodesDB.clusterSubNodes[category] = FarmerNodesDB.clusterSubNodes[category] or {}
 	end
 
 	self:RegisterEvent("PLAYER_ENTERING_WORLD")

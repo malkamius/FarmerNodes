@@ -63,6 +63,7 @@ function Importers:ImportTable(sourceTable, category)
 		end
 	end
 
+	FarmerNodes.Database:RebuildCategoryClusters(category)
 	FarmerNodes:SendMessage("FarmerNodes_DataChanged")
 	return count
 end

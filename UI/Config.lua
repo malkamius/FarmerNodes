@@ -214,6 +214,117 @@ local options = {
 				},
 			}
 		},
+		grouping = {
+			name = "Node Grouping (Clustering)",
+			type = "group",
+			order = 1.5,
+			args = {
+				enableGrouping = {
+					name = "Enable Node Grouping",
+					desc = "Group/cluster nearby nodes to reduce map clutter. Displays a single node representing the cluster in the center.",
+					type = "toggle",
+					get = function() return GetProfile().enableGrouping end,
+					set = function(_, val)
+						GetProfile().enableGrouping = val
+						if val and (not FarmerNodesDB.clustered or not next(FarmerNodesDB.clustered)) then
+							FarmerNodes.Database:RebuildAllClusters()
+						end
+						FarmerNodes:OnConfigChanged()
+					end,
+					order = 10,
+				},
+				disableMinimapCluster = {
+					name = "Disable Clustering on Minimap",
+					desc = "Keep showing individual raw nodes on the Minimap even when grouping is enabled.",
+					type = "toggle",
+					get = function() return GetProfile().disableMinimapCluster ~= false end,
+					set = function(_, val)
+						GetProfile().disableMinimapCluster = val
+						FarmerNodes:OnConfigChanged()
+					end,
+					order = 12,
+					disabled = function() return not GetProfile().enableGrouping end,
+				},
+				clusterSameTypeOnly = {
+					name = "Only Cluster Same Node Types",
+					desc = "When enabled, only nodes of the exact same type (e.g. Copper Vein) will be grouped together.",
+					type = "toggle",
+					get = function() return GetProfile().clusterSameTypeOnly end,
+					set = function(_, val)
+						GetProfile().clusterSameTypeOnly = val
+						FarmerNodes:OnConfigChanged()
+					end,
+					order = 15,
+					disabled = function() return not GetProfile().enableGrouping end,
+				},
+				groupingRange = {
+					name = "Node Grouping Range (Yards)",
+					desc = "Maximum distance between nodes to group them into a single cluster.",
+					type = "range",
+					min = 5, max = 150, step = 5,
+					get = function() return GetProfile().groupingRange or 30 end,
+					set = function(_, val)
+						GetProfile().groupingRange = val
+						FarmerNodes:OnConfigChanged()
+					end,
+					order = 20,
+					disabled = function() return not GetProfile().enableGrouping end,
+				},
+				clusterSeparation = {
+					name = "Cluster Separation (Yards)",
+					desc = "Minimum distance required between separate clusters. Clusters closer than this will be merged.",
+					type = "range",
+					min = 5, max = 200, step = 5,
+					get = function() return GetProfile().clusterSeparation or 50 end,
+					set = function(_, val)
+						GetProfile().clusterSeparation = val
+						FarmerNodes:OnConfigChanged()
+					end,
+					order = 30,
+					disabled = function() return not GetProfile().enableGrouping end,
+				},
+				rebuildClusters = {
+					name = "Recalculate & Apply Clusters",
+					desc = "Recompute all clusters using the current range and separation settings. This may cause a brief pause.",
+					type = "execute",
+					func = function()
+						FarmerNodes.Database:RebuildAllClusters()
+						FarmerNodes:OnConfigChanged()
+						FarmerNodes:Print("All node clusters have been recalculated.")
+					end,
+					order = 35,
+					disabled = function() return not GetProfile().enableGrouping end,
+				},
+				showClusterRadius = {
+					name = "Show Cluster Radius on Hover",
+					desc = "Displays a low-opacity circle showing the physical area/radius of the cluster when you mouse over it on the World Map.",
+					type = "toggle",
+					get = function() return GetProfile().showClusterRadius ~= false end,
+					set = function(_, val) GetProfile().showClusterRadius = val; FarmerNodes:OnConfigChanged() end,
+					order = 40,
+					disabled = function() return not GetProfile().enableGrouping end,
+				},
+				clusterCircleAlpha = {
+					name = "Radius Circle Opacity",
+					desc = "Adjust the transparency of the cluster radius circle.",
+					type = "range",
+					min = 0.05, max = 0.5, step = 0.05,
+					get = function() return GetProfile().clusterCircleAlpha or 0.15 end,
+					set = function(_, val) GetProfile().clusterCircleAlpha = val; FarmerNodes:OnConfigChanged() end,
+					order = 45,
+					disabled = function() return not GetProfile().enableGrouping or GetProfile().showClusterRadius == false end,
+				},
+				showConnectionLines = {
+					name = "Show Connection Lines",
+					desc = "Draw thin green lines connecting the cluster center point to the individual sub-nodes.",
+					type = "toggle",
+					get = function() return GetProfile().showConnectionLines ~= false end,
+					set = function(_, val) GetProfile().showConnectionLines = val; FarmerNodes:OnConfigChanged() end,
+					order = 50,
+					disabled = function() return not GetProfile().enableGrouping end,
+				},
+			}
+		},
 		categories = {
 			name = "Categories & Locking",
 			type = "group",
@@ -339,12 +450,16 @@ local function BuildCategoryOptions()
 			confirm = true,
 			confirmText = "Are you absolutely sure you want to permanently delete all coordinates for: " .. category .. "? This cannot be undone.",
 			func = function()
+				local oldNodes = FarmerNodesDB.nodes[category]
 				FarmerNodesDB.nodes[category] = {}
-				for zoneID, coords in pairs(FarmerNodesDB.nodes[category]) do
-					for c, id in pairs(coords) do
-						FarmerNodes:DispatchEvent("OnDatabaseUpdated", zoneID, category, c, id, "DELETE")
+				if oldNodes then
+					for zoneID, coords in pairs(oldNodes) do
+						for c, id in pairs(coords) do
+							FarmerNodes:DispatchEvent("OnDatabaseUpdated", zoneID, category, c, id, "DELETE")
+						end
 					end
 				end
+				FarmerNodes.Database:RebuildCategoryClusters(category)
 				FarmerNodes:SendMessage("FarmerNodes_DataChanged")
 				FarmerNodes:Print(category .. " database coordinates have been wiped.")
 			end,
