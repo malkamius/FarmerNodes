@@ -130,7 +130,9 @@ function MinimapModule:GetMinimapPin(coord, nodeID, category)
 	pin.coord = coord
 	pin.nodeID = nodeID
 	pin.category = category
-	pin.title = FarmerNodes.ReverseNodeIDs[category][nodeID] or category
+	pin.zone = zoneID
+	local displayID = FarmerNodes:GetDisplayNode(category, nodeID, zoneID)
+	pin.title = FarmerNodes.ReverseNodeIDs[category][displayID] or category
 
 	-- Fire developer hook
 	FarmerNodes:DispatchEvent("OnPinCreated", pin, category, nodeID, "minimap")
@@ -276,7 +278,7 @@ function MinimapModule:UpdatePinPositions(force)
 			local circleScale = FarmerNodes.db.profile.minimapCircleScale or 1.0
 			pin:SetSize(10 * scale * circleScale, 10 * scale * circleScale)
 		else
-			pin.texture:SetTexture(FarmerNodes:GetNodeIcon(pin.category, pin.nodeID))
+			pin.texture:SetTexture(FarmerNodes:GetNodeIcon(pin.category, pin.nodeID, zoneID))
 			pin.texture:SetVertexColor(1, 1, 1, 1)
 			pin:SetSize(12 * scale, 12 * scale)
 		end

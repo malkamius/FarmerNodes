@@ -101,7 +101,8 @@ function FarmerNodesWorldMapPinMixin:OnAcquired(coord, nodeID, category, zone)
 	self.nodeID = nodeID
 	self.category = category
 	self.zone = zone
-	self.title = FarmerNodes.ReverseNodeIDs[category][nodeID] or category
+	local displayID = FarmerNodes:GetDisplayNode(category, nodeID, zone)
+	self.title = FarmerNodes.ReverseNodeIDs[category][displayID] or category
 
 	local x, y = FarmerNodes:DecodeLoc(coord)
 	self:SetPosition(x, y)
@@ -109,7 +110,7 @@ function FarmerNodesWorldMapPinMixin:OnAcquired(coord, nodeID, category, zone)
 	local scale = FarmerNodes.db.profile.worldmapScale or 1.0
 	self:SetSize(12 * scale, 12 * scale)
 
-	self.texture:SetTexture(FarmerNodes:GetNodeIcon(category, nodeID))
+	self.texture:SetTexture(FarmerNodes:GetNodeIcon(category, nodeID, zone))
 	self:EnableMouse(FarmerNodes.db.profile.worldMapIconsInteractive)
 
 	-- Fire developer hook
@@ -136,31 +137,54 @@ end
 -- Context Dropdown Menu
 -- ==========================================
 
-local contextMenuFrame = CreateFrame("Frame", "FarmerNodesContextMenuFrame", UIParent, "UIDropDownMenuTemplate")
+local contextMenuFrame
 
 function WorldMapModule:ShowPinContextMenu(pin, mapType)
-	local menu = {
-		{ text = pin.title, isTitle = true },
-		{ text = "Delete Node", func = function()
-			FarmerNodes.Database:DeleteNode(pin.zone or zoneID, pin.category, pin.coord)
-		end },
-	}
+	if MenuUtil and MenuUtil.CreateContextMenu then
+		MenuUtil.CreateContextMenu(pin, function(ownerRegion, rootDescription)
+			rootDescription:CreateTitle(pin.title or "Resource Node")
+			rootDescription:CreateButton("Delete Node", function()
+				FarmerNodes.Database:DeleteNode(pin.zone, pin.category, pin.coord)
+			end)
+			if TomTom then
+				rootDescription:CreateButton("Add to TomTom Waypoints", function()
+					local x, y = FarmerNodes:DecodeLoc(pin.coord)
+					TomTom:AddWaypoint(pin.zone, x, y, {
+						title = pin.title,
+						persistent = false,
+						minimap = true,
+						world = true
+					})
+				end)
+			end
+		end)
+	elseif EasyMenu then
+		if not contextMenuFrame then
+			contextMenuFrame = CreateFrame("Frame", "FarmerNodesContextMenuFrame", UIParent, "UIDropDownMenuTemplate")
+		end
+		local menu = {
+			{ text = pin.title, isTitle = true },
+			{ text = "Delete Node", func = function()
+				FarmerNodes.Database:DeleteNode(pin.zone, pin.category, pin.coord)
+			end },
+		}
 
-	if TomTom then
-		table.insert(menu, { text = "Add to TomTom Waypoints", func = function()
-			local x, y = FarmerNodes:DecodeLoc(pin.coord)
-			TomTom:AddWaypoint(pin.zone or zoneID, x, y, {
-				title = pin.title,
-				persistent = false,
-				minimap = true,
-				world = true
-			})
-		end })
+		if TomTom then
+			table.insert(menu, { text = "Add to TomTom Waypoints", func = function()
+				local x, y = FarmerNodes:DecodeLoc(pin.coord)
+				TomTom:AddWaypoint(pin.zone, x, y, {
+					title = pin.title,
+					persistent = false,
+					minimap = true,
+					world = true
+				})
+			end })
+		end
+
+		table.insert(menu, { text = "Cancel", func = function() CloseDropDownMenus() end })
+
+		EasyMenu(menu, contextMenuFrame, "cursor", 0, 0, "MENU")
 	end
-
-	table.insert(menu, { text = "Cancel", func = function() CloseDropDownMenus() end })
-
-	EasyMenu(menu, contextMenuFrame, "cursor", 0, 0, "MENU")
 end
 
 -- Expose world map module globally on namespace for minimap context menu

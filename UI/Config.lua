@@ -30,6 +30,19 @@ local options = {
 					set = function(_, val) GetProfile().showWorldMap = val; FarmerNodes:OnConfigChanged() end,
 					order = 20,
 				},
+				nodeDisplayMode = {
+					name = "Node Display Mode",
+					desc = "Control how resource nodes are displayed on the maps. 'Show Most Likely / Base Resource' will show common resources like Fel Iron instead of rare spawns like Khorium.",
+					type = "select",
+					values = {
+						["likely"] = "Show Most Likely / Base Resource",
+						["exact"] = "Show Stored/Exact Resource",
+						["highest"] = "Show Highest Level Resource",
+					},
+					get = function() return GetProfile().nodeDisplayMode or "likely" end,
+					set = function(_, val) GetProfile().nodeDisplayMode = val; FarmerNodes:OnConfigChanged() end,
+					order = 25,
+				},
 				minimapTooltips = {
 					name = "Minimap Tooltips",
 					desc = "Show tooltips when mousing over minimap pins.",

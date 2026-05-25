@@ -9,6 +9,7 @@ local defaults = {
 	profile = {
 		showMinimap = true,
 		showWorldMap = true,
+		nodeDisplayMode = "likely",
 		minimapScale = 1.0,
 		minimapCircleScale = 1.0,
 		minimapAlpha = 0.6,

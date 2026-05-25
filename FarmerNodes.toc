@@ -5,7 +5,7 @@
 ## SavedVariables: FarmerNodesDB
 ## OptionalDeps: GatherMate2, GatherMate2_Data, TomTom
 ## IconTexture: Interface\AddOns\FarmerNodes\farmernodes_icon.jpg
-## Version: 1.0.0
+## Version: 1.1.0
 
 # Libraries
 Libs\LibStub\LibStub.lua

@@ -207,8 +207,8 @@ FarmerNodes.NodeIcons = {
 	[214] = "Interface\\Icons\\INV_Ore_Thorium_01",
 	[215] = "Interface\\Icons\\INV_Ore_Thorium_02",
 	[221] = "Interface\\Icons\\INV_Ore_Feliron",
-	[222] = "Interface\\Icons\\INV_Ore_Adamantite",
-	[223] = "Interface\\Icons\\INV_Ore_Adamantite_Rich",
+	[222] = "Interface\\Icons\\INV_Ore_Adamantium",
+	[223] = "Interface\\Icons\\INV_Ore_Adamantium",
 	[224] = "Interface\\Icons\\INV_Ore_Khorium_01",
 	[227] = "Interface\\Icons\\INV_Ore_Nethercite",
 
@@ -297,9 +297,216 @@ FarmerNodes.NodeIcons = {
 	[531] = "Interface\\Icons\\INV_Misc_Egg_03",
 }
 
+-- Table mapping node ID to skill level required for gathering
+FarmerNodes.NodeSkillLevels = {
+	-- Mining
+	[201] = 1,     -- Copper Vein
+	[202] = 65,    -- Tin Vein
+	[203] = 125,   -- Iron Deposit
+	[204] = 75,    -- Silver Vein
+	[205] = 155,   -- Gold Vein
+	[206] = 175,   -- Mithril Deposit
+	[207] = 175,   -- Ooze Covered Mithril Deposit
+	[208] = 230,   -- Truesilver Deposit
+	[209] = 230,   -- Ooze Covered Silver Vein
+	[210] = 230,   -- Ooze Covered Gold Vein
+	[211] = 230,   -- Ooze Covered Truesilver Deposit
+	[212] = 275,   -- Ooze Covered Rich Thorium Vein
+	[213] = 250,   -- Ooze Covered Thorium Vein
+	[214] = 250,   -- Small Thorium Vein
+	[215] = 275,   -- Rich Thorium Vein
+	[217] = 230,   -- Dark Iron Deposit
+	[218] = 75,    -- Lesser Bloodstone Deposit
+	[219] = 65,    -- Incendicite Mineral Vein
+	[220] = 150,   -- Indurium Mineral Vein
+	[221] = 300,   -- Fel Iron Deposit
+	[222] = 325,   -- Adamantite Deposit
+	[223] = 350,   -- Rich Adamantite Deposit
+	[224] = 375,   -- Khorium Vein
+	[225] = 305,   -- Large Obsidian Chunk
+	[226] = 305,   -- Small Obsidian Chunk
+	[227] = 350,   -- Nethercite Deposit
+
+	-- Herb Gathering
+	[401] = 1,     -- Peacebloom
+	[402] = 1,     -- Silverleaf
+	[403] = 15,    -- Earthroot
+	[404] = 50,    -- Mageroyal
+	[405] = 70,    -- Briarthorn
+	[407] = 85,    -- Stranglekelp
+	[408] = 85,    -- Bruiseweed
+	[409] = 115,   -- Wild Steelbloom
+	[410] = 120,   -- Grave Moss
+	[411] = 125,   -- Kingsblood
+	[412] = 150,   -- Liferoot
+	[413] = 160,   -- Fadeleaf
+	[414] = 170,   -- Goldthorn
+	[415] = 185,   -- Khadgar's Whisker
+	[416] = 195,   -- Wintersbite
+	[417] = 205,   -- Firebloom
+	[418] = 210,   -- Purple Lotus
+	[420] = 220,   -- Arthas' Tears
+	[421] = 230,   -- Sungrass
+	[422] = 235,   -- Blindweed
+	[423] = 245,   -- Ghost Mushroom
+	[424] = 250,   -- Gromsblood
+	[425] = 260,   -- Golden Sansam
+	[426] = 270,   -- Dreamfoil
+	[427] = 280,   -- Mountain Silversage
+	[428] = 285,   -- Plaguebloom
+	[429] = 290,   -- Icecap
+	[431] = 300,   -- Black Lotus
+	[432] = 300,   -- Felweed
+	[433] = 315,   -- Dreaming Glory
+	[434] = 325,   -- Terocone
+	[435] = 340,   -- Ancient Lichen
+	[436] = 1,     -- Bloodthistle
+	[437] = 375,   -- Mana Thistle
+	[438] = 350,   -- Netherbloom
+	[439] = 365,   -- Nightmare Vine
+	[440] = 325,   -- Ragveil
+	[441] = 335,   -- Flame Cap
+	[442] = 350,   -- Netherdust Bush
+}
+
+FarmerNodes.HighestLevelResourceMap = {}
+
+-- Returns the highest level resource node ID that can spawn at the given node's location
+function FarmerNodes:GetHighestLevelResource(category, nodeID)
+	if not self.HighestLevelResourceMap[category] then
+		return nodeID
+	end
+	return self.HighestLevelResourceMap[category][nodeID] or nodeID
+end
+
+-- Initialize the highest level resource map dynamically based on RareNodes
+function FarmerNodes:InitHighestLevelResourceMap()
+	for category, nodes in pairs(self.NodeIDs) do
+		self.HighestLevelResourceMap[category] = {}
+		for _, nodeID in pairs(nodes) do
+			local pool = { [nodeID] = true }
+
+			if self.RareNodes[nodeID] then
+				-- If it's a rare node, it can spawn at any of its base nodes' positions
+				for baseID in pairs(self.RareNodes[nodeID]) do
+					pool[baseID] = true
+					-- And those base nodes can also spawn any other rare nodes that replace them
+					for rareID, bases in pairs(self.RareNodes) do
+						if bases[baseID] then
+							pool[rareID] = true
+						end
+					end
+				end
+			else
+				-- If it's a base node, it can spawn any rare nodes that replace it
+				for rareID, bases in pairs(self.RareNodes) do
+					if bases[nodeID] then
+						pool[rareID] = true
+					end
+				end
+			end
+
+			-- Find the node with the highest skill level in the pool
+			local highestID = nodeID
+			local highestSkill = self.NodeSkillLevels[nodeID] or 0
+			for id in pairs(pool) do
+				local skill = self.NodeSkillLevels[id] or 0
+				if skill > highestSkill then
+					highestSkill = skill
+					highestID = id
+				elseif skill == highestSkill then
+					-- Tie-breaker: prioritize nodes that actually have specific icons over generic ones
+					local currentHasIcon = self.NodeIcons[highestID] ~= nil
+					local newHasIcon = self.NodeIcons[id] ~= nil
+					if newHasIcon and not currentHasIcon then
+						highestID = id
+					elseif newHasIcon == currentHasIcon and id > highestID then
+						highestID = id
+					end
+				end
+			end
+
+			self.HighestLevelResourceMap[category][nodeID] = highestID
+		end
+	end
+end
+
+-- Initialize the map statically after setup
+FarmerNodes:InitHighestLevelResourceMap()
+
+-- Returns the most likely resource node ID that can spawn at the given node's location
+function FarmerNodes:GetMostLikelyResource(category, nodeID, zoneID)
+	if not self.RareNodes[nodeID] then
+		return nodeID
+	end
+
+	local bases = self.RareNodes[nodeID]
+	local bestBaseID = nil
+	local bestCount = -1
+	local lowestSkill = 999
+	local fallbackBaseID = nil
+
+	local zoneNodes = zoneID and FarmerNodesDB.nodes[category] and FarmerNodesDB.nodes[category][zoneID]
+
+	for baseID in pairs(bases) do
+		-- Keep track of the fallback (lowest skill level base node)
+		local skill = self.NodeSkillLevels[baseID] or 0
+		if skill < lowestSkill then
+			lowestSkill = skill
+			fallbackBaseID = baseID
+		end
+
+		if zoneNodes then
+			local count = 0
+			for _, id in pairs(zoneNodes) do
+				if id == baseID then
+					count = count + 1
+				end
+			end
+			if count > bestCount then
+				bestCount = count
+				bestBaseID = baseID
+			end
+		end
+	end
+
+	-- If we found a base node with a positive count, use it
+	if bestBaseID and bestCount > 0 then
+		-- Recursive check: if the best base ID is itself a rare node (like 223 Rich Adamantite), resolve it further
+		if self.RareNodes[bestBaseID] then
+			return self:GetMostLikelyResource(category, bestBaseID, zoneID)
+		end
+		return bestBaseID
+	end
+
+	-- Otherwise, fallback to the base node with the lowest skill level requirement
+	if fallbackBaseID then
+		if self.RareNodes[fallbackBaseID] then
+			return self:GetMostLikelyResource(category, fallbackBaseID, zoneID)
+		end
+		return fallbackBaseID
+	end
+
+	return nodeID
+end
+
+-- Returns the resolved node ID based on the display mode configuration
+function FarmerNodes:GetDisplayNode(category, nodeID, zoneID)
+	local mode = self.db and self.db.profile and self.db.profile.nodeDisplayMode or "likely"
+
+	if mode == "highest" then
+		return self:GetHighestLevelResource(category, nodeID)
+	elseif mode == "likely" then
+		return self:GetMostLikelyResource(category, nodeID, zoneID)
+	else -- "exact"
+		return nodeID
+	end
+end
+
 -- Returns the best icon texture path for a node ID
-function FarmerNodes:GetNodeIcon(category, nodeID)
-	return self.NodeIcons[nodeID] or self.DefaultCategoryIcons[category] or "Interface\\Icons\\INV_Misc_QuestionMark"
+function FarmerNodes:GetNodeIcon(category, nodeID, zoneID)
+	local displayID = self:GetDisplayNode(category, nodeID, zoneID)
+	return self.NodeIcons[displayID] or self.DefaultCategoryIcons[category] or "Interface\\Icons\\INV_Misc_QuestionMark"
 end
 
 -- Direct database add (unconditional)
