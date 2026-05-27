@@ -275,7 +275,7 @@ FarmerNodes.NodeIcons = {
 	-- Gas
 	[301] = "Interface\\Icons\\INV_Elemental_Mote_Air01",
 	[302] = "Interface\\Icons\\INV_Elemental_Mote_Water01",
-	[303] = "Interface\\Icons\\INV_Elemental_Mote_Mana01",
+	[303] = "Interface\\Icons\\INV_Elemental_Mote_Mana",
 	[304] = "Interface\\Icons\\INV_Elemental_Mote_Shadow01",
 	[305] = "Interface\\Icons\\INV_Elemental_Mote_Fire01",
 	[306] = "Interface\\Icons\\INV_Elemental_Mote_Fire01",

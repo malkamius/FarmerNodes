@@ -166,7 +166,7 @@ function FarmerNodesWorldMapPinMixin:OnLoad()
 
 	local mask = self:CreateMaskTexture()
 	mask:SetAllPoints(self.texture)
-	mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+	mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 	self.texture:AddMaskTexture(mask)
 	self.mask = mask
 end
@@ -231,6 +231,7 @@ function FarmerNodesWorldMapPinMixin:OnAcquired(coord, nodeID, category, zone, c
 		end
 		self:SetSize(12 * scale, 12 * scale)
 		self.texture:SetTexture(FarmerNodes:GetNodeIcon(category, nodeID, zone))
+		self.texture:SetTexCoord(0.15, 0.85, 0.15, 0.85)
 		self.texture:SetVertexColor(1, 1, 1, 1) -- Reset color
 		
 		if self.countText then
@@ -247,6 +248,7 @@ function FarmerNodesWorldMapPinMixin:OnAcquired(coord, nodeID, category, zone, c
 		self.title = FarmerNodes.ReverseNodeIDs[category][displayID] or category
 		self:SetSize(12 * scale, 12 * scale)
 		self.texture:SetTexture(FarmerNodes:GetNodeIcon(category, nodeID, zone))
+		self.texture:SetTexCoord(0.15, 0.85, 0.15, 0.85)
 		self.texture:SetVertexColor(1, 1, 1, 1) -- Reset color
 
 		if self.countText then

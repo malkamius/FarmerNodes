@@ -117,7 +117,7 @@ function MinimapModule:GetMinimapPin(coord, nodeID, category, count)
 
 		local mask = pin:CreateMaskTexture()
 		mask:SetAllPoints(tex)
-		mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask")
+		mask:SetTexture("Interface\\CHARACTERFRAME\\TempPortraitAlphaMask", "CLAMPTOBLACKADDITIVE", "CLAMPTOBLACKADDITIVE")
 		tex:AddMaskTexture(mask)
 		pin.mask = mask
 
@@ -314,6 +314,7 @@ function MinimapModule:UpdatePinPositions(force)
 		-- Adjust pin visuals
 		if distSq <= trackDistSq then
 			pin.texture:SetTexture("Interface\\Minimap\\UI-Minimap-Ping-Center")
+			pin.texture:SetTexCoord(0, 1, 0, 1)
 			
 			local profile = FarmerNodes.db.profile
 			local r, g, b, a = 1, 0, 0, 1
@@ -330,6 +331,7 @@ function MinimapModule:UpdatePinPositions(force)
 			end
 		else
 			pin.texture:SetTexture(FarmerNodes:GetNodeIcon(pin.category, pin.nodeID, zoneID))
+			pin.texture:SetTexCoord(0.15, 0.85, 0.15, 0.85)
 			pin.texture:SetVertexColor(1, 1, 1, 1)
 			pin:SetSize(12 * scale, 12 * scale)
 			if pin.countText then
