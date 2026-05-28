@@ -25,6 +25,7 @@ A premium, performance-optimized resource node tracking addon for World of Warcr
 ### 3. Settings & Controls
 * **AceConfig Settings Panel**: Open using `/fn` or `/farmer` to configure pin opacity, scales, category displays, and database locks.
 * **Customizable Minimap Colors**: Pick custom colors for the tracking circle indicators of each node category directly from the settings panel.
+* **Minimap Circle Customization**: Set specific opacity levels for tracking circle indicators and enable smart opacity calculations to automatically dim indicators in crowded areas.
 * **Flexible Display Modes**: Configure whether nodes are shown as their exact harvested resource, their most likely base resource (e.g. Fel Iron instead of Khorium), or their highest level potential resource.
 * **LibDBIcon Minimap Button**: Includes a modern settings button featuring a custom fantasy compass icon. Fully compatible with minimap button managers (like MBB) to keep your UI clean.
 * **In-UI Keybindings**: Easily assign hotkeys directly from the settings panel to quickly toggle Minimap and World Map icons on/off.

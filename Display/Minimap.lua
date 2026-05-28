@@ -29,7 +29,7 @@ local function GetMinimapRadius()
 	if C_Minimap and C_Minimap.IsIndoors then
 		indoorsState = C_Minimap.IsIndoors() and "indoor" or "outdoor"
 	else
-		indoorsState = GetCVar("minimapZoom")+0 == Minimap:GetZoom() and "outdoor" or "indoor"
+		indoorsState = GetCVar("minimapZoom") + 0 == Minimap:GetZoom() and "outdoor" or "indoor"
 	end
 	return (minimapSizes[indoorsState][zoom] or 150) / 2
 end
@@ -182,7 +182,7 @@ end
 
 function MinimapModule:RecycleMinimapPin(pin)
 	pin:Hide()
-	
+
 	-- Fire developer hook
 	FarmerNodes:DispatchEvent("OnPinReleased", pin, "minimap")
 
@@ -248,9 +248,9 @@ function MinimapModule:UpdateMiniMap(force)
 					if wx and wy then
 						local dx = wx - playerWorldX
 						local dy = wy - playerWorldY
-						local distSq = dx*dx + dy*dy
+						local distSq = dx * dx + dy * dy
 
-						if distSq <= (mapRadius * 1.5)^2 then
+						if distSq <= (mapRadius * 1.5) ^ 2 then
 							local pinKey = category .. "_" .. encoded
 							local pin = activePins[pinKey]
 							if not pin then
@@ -286,7 +286,7 @@ function MinimapModule:UpdatePinPositions(force)
 	local rotateMinimap = GetCVar("rotateMinimap") == "1"
 	local scale = FarmerNodes.db.profile.minimapScale or 1.0
 	local alpha = FarmerNodes.db.profile.minimapAlpha or 0.6
-	
+
 	mapRadius = GetMinimapRadius()
 
 	if not force and playerWorldX == lastPX and playerWorldY == lastPY and facing == lastFacing then
@@ -307,15 +307,13 @@ function MinimapModule:UpdatePinPositions(force)
 	for pinKey, pin in pairs(activePins) do
 		local dx = playerWorldX - pin.wx
 		local dy = playerWorldY - pin.wy
-		local distSq = dx*dx + dy*dy
-
-		pin:SetAlpha(alpha)
+		local distSq = dx * dx + dy * dy
 
 		-- Adjust pin visuals
 		if distSq <= trackDistSq then
 			pin.texture:SetTexture("Interface\\Minimap\\UI-Minimap-Ping-Center")
 			pin.texture:SetTexCoord(0, 1, 0, 1)
-			
+
 			local profile = FarmerNodes.db.profile
 			local r, g, b, a = 1, 0, 0, 1
 			if profile.circleColors and profile.circleColors[pin.category] then
@@ -323,12 +321,32 @@ function MinimapModule:UpdatePinPositions(force)
 				r, g, b, a = c.r, c.g, c.b, c.a
 			end
 			pin.texture:SetVertexColor(r, g, b, a)
-			
+
 			local circleScale = profile.minimapCircleScale or 1.0
 			pin:SetSize(10 * scale * circleScale, 10 * scale * circleScale)
 			if pin.countText then
 				pin.countText:Hide()
 			end
+
+			local circleAlpha = profile.minimapCircleAlpha or 0.6
+			if profile.minimapCircleSmartAlpha then
+				local crowd = 0
+				for otherKey, otherPin in pairs(activePins) do
+					if otherKey ~= pinKey then
+						local odx = pin.wx - otherPin.wx
+						local ody = pin.wy - otherPin.wy
+						local odist = math.sqrt(odx * odx + ody * ody)
+						if odist < 5 then
+							crowd = crowd + (5 - odist) / 5
+						end
+					end
+				end
+				if crowd > 0 then
+					circleAlpha = circleAlpha * math.max(0.2, 1 / (1 + crowd))
+				end
+			end
+
+			pin:SetAlpha(circleAlpha)
 		else
 			pin.texture:SetTexture(FarmerNodes:GetNodeIcon(pin.category, pin.nodeID, zoneID))
 			pin.texture:SetTexCoord(0.15, 0.85, 0.15, 0.85)
@@ -341,6 +359,8 @@ function MinimapModule:UpdatePinPositions(force)
 					pin.countText:Hide()
 				end
 			end
+
+			pin:SetAlpha(alpha)
 		end
 
 		-- Dispatch hook event on updates
@@ -360,7 +380,7 @@ function MinimapModule:UpdatePinPositions(force)
 		local diffX = rx / mapRadius
 		local diffY = ry / mapRadius
 
-		local distCenter = math.sqrt(diffX*diffX + diffY*diffY)
+		local distCenter = math.sqrt(diffX * diffX + diffY * diffY)
 		if distCenter > 0.95 then
 			pin:Hide()
 		else

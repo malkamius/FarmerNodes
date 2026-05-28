@@ -88,6 +88,23 @@ local options = {
 					set = function(_, val) GetProfile().minimapCircleScale = val; FarmerNodes:OnConfigChanged() end,
 					order = 52,
 				},
+				minimapCircleAlpha = {
+					name = "Minimap Circle Opacity",
+					desc = "Adjust the transparency of the tracking circle indicators on the minimap.",
+					type = "range",
+					min = 0.1, max = 1.0, step = 0.05,
+					get = function() return GetProfile().minimapCircleAlpha or 0.6 end,
+					set = function(_, val) GetProfile().minimapCircleAlpha = val; FarmerNodes:OnConfigChanged() end,
+					order = 53,
+				},
+				minimapCircleSmartAlpha = {
+					name = "Smart Circle Opacity",
+					desc = "Dynamically lowers the circle indicator opacity in crowded areas to reduce clutter. Remains fully visible if no other nodes are within 5 yards.",
+					type = "toggle",
+					get = function() return GetProfile().minimapCircleSmartAlpha ~= false end,
+					set = function(_, val) GetProfile().minimapCircleSmartAlpha = val; FarmerNodes:OnConfigChanged() end,
+					order = 54,
+				},
 				minimapAlpha = {
 					name = "Minimap Pin Opacity",
 					desc = "Opacity of minimap pins.",
