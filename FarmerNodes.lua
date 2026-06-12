@@ -165,7 +165,16 @@ local function GetSpellDetails(spellID)
 end
 
 function FarmerNodes:IsTrackingActive(category)
-	local targetSpellID = (category == "Mining") and 2580 or 2383
+	local spellIDs = {
+		["Mining"] = 2580,
+		["Herb Gathering"] = 2383,
+		["Fishing"] = 43308,
+		["Extract Gas"] = 30645,
+		["Treasure"] = 2481,
+	}
+	local targetSpellID = spellIDs[category]
+	if not targetSpellID then return false end
+
 	local localizedName, targetTexture = GetSpellDetails(targetSpellID)
 
 	-- 1. Check C_Minimap if available
@@ -174,11 +183,23 @@ function FarmerNodes:IsTrackingActive(category)
 		for id = 1, count do
 			local info = C_Minimap.GetTrackingInfo(id)
 			if info and info.active then
+				if info.spellID and info.spellID == targetSpellID then
+					return true
+				end
 				if localizedName and info.name == localizedName then
 					return true
 				end
 				if targetTexture and (info.texture == targetTexture or tostring(info.texture):find(tostring(targetTexture))) then
 					return true
+				end
+				-- Check for DefaultCategoryIcons matching (string path)
+				local categoryTexture = self.DefaultCategoryIcons and self.DefaultCategoryIcons[category]
+				if categoryTexture and type(info.texture) == "string" then
+					local normInfoTex = info.texture:lower():gsub("\\", "/"):gsub("%.blp$", "")
+					local normCatTex = categoryTexture:lower():gsub("\\", "/"):gsub("%.blp$", "")
+					if normInfoTex == normCatTex or normInfoTex:find(normCatTex, 1, true) or normCatTex:find(normInfoTex, 1, true) then
+						return true
+					end
 				end
 			end
 		end
@@ -190,6 +211,16 @@ function FarmerNodes:IsTrackingActive(category)
 		if targetTexture and (activeTexture == targetTexture or tostring(activeTexture):find(tostring(targetTexture))) then
 			return true
 		end
+		-- Check for DefaultCategoryIcons matching (string path)
+		local categoryTexture = self.DefaultCategoryIcons and self.DefaultCategoryIcons[category]
+		if categoryTexture and type(activeTexture) == "string" then
+			local normActive = activeTexture:lower():gsub("\\", "/"):gsub("%.blp$", "")
+			local normCat = categoryTexture:lower():gsub("\\", "/"):gsub("%.blp$", "")
+			if normActive == normCat or normActive:find(normCat, 1, true) or normCat:find(normActive, 1, true) then
+				return true
+			end
+		end
+
 		local activeStr = tostring(activeTexture):lower()
 		if category == "Mining" then
 			if activeStr:find("ore") or activeStr:find("mineral") or activeStr:find("earthquake") then
@@ -197,6 +228,18 @@ function FarmerNodes:IsTrackingActive(category)
 			end
 		elseif category == "Herb Gathering" then
 			if activeStr:find("flower") or activeStr:find("herbalism") then
+				return true
+			end
+		elseif category == "Fishing" then
+			if activeStr:find("fish") then
+				return true
+			end
+		elseif category == "Extract Gas" then
+			if activeStr:find("ammonia") or activeStr:find("gas") or activeStr:find("mote") or activeStr:find("detectinvisibility") then
+				return true
+			end
+		elseif category == "Treasure" then
+			if activeStr:find("treasure") or activeStr:find("chest") then
 				return true
 			end
 		end
