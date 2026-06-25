@@ -1,11 +1,11 @@
-## Interface: 11508
+## Interface: 11508, 20505
 ## Title: FarmerNodes
 ## Notes: Tracks and displays resource nodes on the world map and minimap.
 ## Author: Antigravity
 ## SavedVariables: FarmerNodesDB
 ## OptionalDeps: GatherMate2, GatherMate2_Data, TomTom
 ## IconTexture: Interface\AddOns\FarmerNodes\farmernodes_icon.jpg
-## Version: 1.4.2
+## Version: 1.4.3
 
 # Libraries
 Libs\LibStub\LibStub.lua
