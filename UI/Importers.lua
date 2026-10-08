@@ -20,6 +20,8 @@ function Importers:ImportFromGatherMate2(category)
 end
 
 function Importers:ImportFromGatherMateData(category)
+	local GetAddOnInfo = C_AddOns and C_AddOns.GetAddOnInfo or GetAddOnInfo
+	local LoadAddOn = C_AddOns and C_AddOns.LoadAddOn or LoadAddOn
 	local name, title, notes, loadable, reason = GetAddOnInfo("GatherMate2_Data")
 	if not name then
 		return false, "GatherMate2_Data addon is not installed."

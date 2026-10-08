@@ -28,10 +28,23 @@ local spellIDToCategory = {
 	[93473]  = "Treasure",        -- Sandstorm (Mysterious Camel Figurine)
 }
 
+local function GetSpellName(spellID)
+	if not spellID then return nil end
+	if C_Spell and C_Spell.GetSpellName then
+		return C_Spell.GetSpellName(spellID)
+	elseif C_Spell and C_Spell.GetSpellInfo then
+		local info = C_Spell.GetSpellInfo(spellID)
+		return info and info.name
+	elseif GetSpellInfo then
+		return (GetSpellInfo(spellID))
+	end
+	return nil
+end
+
 function Collector:OnEnable()
 	-- Dynamically map localized spell names to categories
 	for spellID, category in pairs(spellIDToCategory) do
-		local spellName = GetSpellInfo(spellID)
+		local spellName = GetSpellName(spellID)
 		if spellName then
 			spells[spellName] = category
 		end
@@ -60,7 +73,7 @@ end
 function Collector:UNIT_SPELLCAST_SENT(event, unit, target, castGUID, spellID)
 	if unit ~= "player" then return end
 
-	local spellName = GetSpellInfo(spellID)
+	local spellName = GetSpellName(spellID)
 	if not spellName then return end
 
 	local category = spells[spellName]
@@ -93,7 +106,7 @@ end
 
 function Collector:SpellFailed(event, unit, castGUID, spellID)
 	if unit ~= "player" then return end
-	if activeCast.castGUID == castGUID or GetSpellInfo(spellID) == activeCast.spell then
+	if activeCast.castGUID == castGUID or (spellID and GetSpellName(spellID) == activeCast.spell) then
 		activeCast = {}
 	end
 end
@@ -101,7 +114,7 @@ end
 function Collector:UNIT_SPELLCAST_SUCCEEDED(event, unit, castGUID, spellID)
 	if unit ~= "player" then return end
 
-	local spellName = GetSpellInfo(spellID)
+	local spellName = GetSpellName(spellID)
 	if not spellName then return end
 
 	local category = spells[spellName]
@@ -123,7 +136,7 @@ function Collector:UNIT_SPELLCAST_SUCCEEDED(event, unit, castGUID, spellID)
 			-- Vector offset for floating nodes (Fishing bobs & Gas clouds)
 			-- Offset 15 yards in the player's facing direction
 			if category == "Fishing" or category == "Extract Gas" then
-				local facing = GetPlayerFacing()
+				local facing = GetPlayerFacing and GetPlayerFacing()
 				if facing then
 					local rad = facing + math.pi
 					local yw, yh = FarmerNodes.HBD:GetZoneSize(zoneID)

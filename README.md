@@ -1,6 +1,6 @@
 # FarmerNodes
 
-A premium, performance-optimized resource node tracking addon for World of Warcraft (TBC Classic / Anniversary Edition). 
+A premium, performance-optimized resource node tracking addon for World of Warcraft (Forever / Classic Era / TBC Anniversary Edition). 
 
 **FarmerNodes** automatically monitors, records, and displays coordinates for Mining Veins, Herb Bushes, Fishing Pools, Gas Clouds, and Treasure Chests on both the World Map and the Minimap.
 
@@ -41,7 +41,8 @@ A premium, performance-optimized resource node tracking addon for World of Warcr
 
 1. Download the latest release of **FarmerNodes**.
 2. Extract the folder into your World of Warcraft directory:
-   `World of Warcraft\_anniversary_\Interface\AddOns\FarmerNodes`
+   `World of Warcraft\_classic_beta_\Interface\AddOns\FarmerNodes` (Forever) or
+   `World of Warcraft\_anniversary_\Interface\AddOns\FarmerNodes` (Anniversary / Classic Era)
 3. Launch the game, and ensure the addon is enabled in your AddOns list.
 
 ---

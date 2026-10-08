@@ -206,7 +206,7 @@ function FarmerNodes:IsTrackingActive(category)
 	end
 
 	-- 2. Fallback to GetTrackingTexture()
-	local activeTexture = GetTrackingTexture()
+	local activeTexture = GetTrackingTexture and GetTrackingTexture()
 	if activeTexture then
 		if targetTexture and (activeTexture == targetTexture or tostring(activeTexture):find(tostring(targetTexture))) then
 			return true

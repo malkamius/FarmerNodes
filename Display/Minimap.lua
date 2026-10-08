@@ -29,7 +29,8 @@ local function GetMinimapRadius()
 	if C_Minimap and C_Minimap.IsIndoors then
 		indoorsState = C_Minimap.IsIndoors() and "indoor" or "outdoor"
 	else
-		indoorsState = GetCVar("minimapZoom") + 0 == Minimap:GetZoom() and "outdoor" or "indoor"
+		local cvarZoom = tonumber(GetCVar("minimapZoom")) or 0
+		indoorsState = cvarZoom == zoom and "outdoor" or "indoor"
 	end
 	return (minimapSizes[indoorsState][zoom] or 150) / 2
 end
@@ -219,6 +220,7 @@ function MinimapModule:UpdateMiniMap(force)
 	mapRadius = GetMinimapRadius()
 
 	-- Skip if player has not moved or updated zoom/zone
+	local zoom = Minimap:GetZoom()
 	local playerWorldX, playerWorldY = FarmerNodes.HBD:GetPlayerWorldPosition()
 	if not force and playerWorldX == lastPX and playerWorldY == lastPY and zoom == lastZoom then
 		return
