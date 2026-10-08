@@ -21,6 +21,7 @@ A premium, performance-optimized resource node tracking addon for World of Warcr
 * **Distance-based Transformation**: Minimap icon textures automatically transition into subtle, color-coded tracking rings when you enter their vicinity (default: 15 yards) for cleaner tracking.
 * **TomTom Waypoints**: Right-click any World Map pin to add a TomTom navigation waypoint instantly.
 * **Node Grouping (Clustering)**: Group nearby resource coordinates into clusters to minimize map clutter. On the World Map, hovering over a cluster center blooms out all the sub-nodes at their actual locations, connected by thin green lines, with a detailed list of every resource type in the cluster tooltip. Minimap clustering can be disabled independently (on by default) to preserve individual node visibility while gathering.
+* **Adjustable World Map Opacity**: Customize the opacity and transparency of world map pins directly from the settings panel.
 
 ### 3. Settings & Controls
 * **AceConfig Settings Panel**: Open using `/fn` or `/farmer` to configure pin opacity, scales, category displays, and database locks.

@@ -123,6 +123,15 @@ local options = {
 					set = function(_, val) GetProfile().worldmapScale = val; FarmerNodes:OnConfigChanged() end,
 					order = 60,
 				},
+				worldmapAlpha = {
+					name = "World Map Pin Opacity",
+					desc = "Opacity of world map pins.",
+					type = "range",
+					min = 0.1, max = 1.0, step = 0.05,
+					get = function() return GetProfile().worldmapAlpha or 1.0 end,
+					set = function(_, val) GetProfile().worldmapAlpha = val; FarmerNodes:OnConfigChanged() end,
+					order = 65,
+				},
 				trackDistance = {
 					name = "Tracking Radius (Yards)",
 					desc = "Distance at which nodes transition into a simple circle indicator.",

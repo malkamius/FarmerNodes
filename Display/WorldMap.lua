@@ -221,6 +221,8 @@ function FarmerNodesWorldMapPinMixin:OnAcquired(coord, nodeID, category, zone, c
 	self:SetPosition(x, y)
 
 	local scale = FarmerNodes.db.profile.worldmapScale or 1.0
+	local alpha = FarmerNodes.db.profile.worldmapAlpha or 1.0
+	self:SetAlpha(alpha)
 
 	if self.isClusterCenter then
 		-- It's a cluster center indicator
@@ -325,6 +327,7 @@ function FarmerNodesWorldMapPinMixin:OnReleased()
 	if self.line then
 		self.line:Hide()
 	end
+	self:SetAlpha(1.0)
 end
 
 function FarmerNodesWorldMapPinMixin:ShowClusterRadiusCircle()

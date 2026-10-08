@@ -4,19 +4,23 @@ _G.FarmerNodes = FarmerNodes
 
 FarmerNodes.HBD = LibStub("HereBeDragons-2.0")
 
+local interfaceVersion = select(4, GetBuildInfo())
+local isForever = (WOW_PROJECT_CAMELOT ~= nil and WOW_PROJECT_ID == WOW_PROJECT_CAMELOT) or (interfaceVersion >= 16000 and interfaceVersion < 17000)
+
 -- Default settings profiles
 local defaults = {
 	profile = {
 		showMinimap = true,
 		showWorldMap = true,
 		nodeDisplayMode = "likely",
-		minimapScale = 1.0,
+		minimapScale = isForever and 1.2 or 1.0,
 		minimapCircleScale = 1.0,
-		minimapCircleAlpha = 0.6,
+		minimapCircleAlpha = isForever and 0.4 or 0.6,
 		minimapCircleSmartAlpha = true,
-		minimapAlpha = 0.6,
+		minimapAlpha = isForever and 0.2 or 0.6,
 		worldmapScale = 1.0,
-		trackDistance = 15,
+		worldmapAlpha = isForever and 0.3 or 1.0,
+		trackDistance = isForever and 105 or 15,
 		minimapTooltips = true,
 		worldMapIconsInteractive = true,
 		enableGrouping = false,
