@@ -1,8 +1,8 @@
 <Bindings>
-	<Binding name="FARMERNODES_TOGGLE_MINIMAP" header="FARMERNODES">
+	<Binding name="FARMERNODES_TOGGLE_MINIMAP" header="FARMERNODES" category="ADDONS">
 		FarmerNodes:ToggleMinimapIcons()
 	</Binding>
-	<Binding name="FARMERNODES_TOGGLE_WORLDMAP">
+	<Binding name="FARMERNODES_TOGGLE_WORLDMAP" category="ADDONS">
 		FarmerNodes:ToggleWorldMapIcons()
 	</Binding>
 </Bindings>

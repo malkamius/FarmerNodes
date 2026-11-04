@@ -203,6 +203,15 @@ local options = {
 					type = "header",
 					order = 86,
 				},
+				openKeybindings = {
+					name = "Open WoW Keybindings",
+					desc = "Open the World of Warcraft Keybindings settings menu directly.",
+					type = "execute",
+					func = function()
+						FarmerNodes:OpenKeybindingsMenu()
+					end,
+					order = 86.5,
+				},
 				toggleMinimapKey = {
 					name = "Toggle Minimap Icons",
 					desc = "Keybinding to toggle minimap resource icons.",
@@ -535,18 +544,21 @@ function Config:OnInitialize()
 end
 
 function FarmerNodes:SlashCommand(input)
-	if not input or input == "" then
+	local cmd = (input or ""):trim():lower()
+	if not cmd or cmd == "" then
 		local AceConfigDialog = LibStub("AceConfigDialog-3.0")
 		if AceConfigDialog.OpenFrames["FarmerNodes"] then
 			AceConfigDialog:Close("FarmerNodes")
 		else
 			AceConfigDialog:Open("FarmerNodes")
 		end
-	elseif input == "sweep" then
+	elseif cmd == "bind" or cmd == "keybind" or cmd == "keys" or cmd == "keybindings" then
+		self:OpenKeybindingsMenu()
+	elseif cmd == "sweep" then
 		self.Database:SweepDatabase()
 		self:Print("Database swept and duplicate coordinates successfully removed.")
 	else
-		self:Print("Usage: /fn or /farmer (toggles settings window), /fn sweep (cleans coordinates database)")
+		self:Print("Usage: /fn or /farmer (toggles settings), /fn bind (opens keybindings), /fn sweep (cleans coordinates database)")
 	end
 end
 

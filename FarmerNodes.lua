@@ -2,6 +2,11 @@ local AddonName, FarmerNodes = ...
 LibStub("AceAddon-3.0"):NewAddon(FarmerNodes, AddonName, "AceConsole-3.0", "AceEvent-3.0")
 _G.FarmerNodes = FarmerNodes
 
+-- Keybindings strings
+_G["BINDING_HEADER_FARMERNODES"] = "FarmerNodes"
+_G["BINDING_NAME_FARMERNODES_TOGGLE_MINIMAP"] = "Toggle Minimap Icons"
+_G["BINDING_NAME_FARMERNODES_TOGGLE_WORLDMAP"] = "Toggle World Map Icons"
+
 FarmerNodes.HBD = LibStub("HereBeDragons-2.0")
 
 local interfaceVersion = select(4, GetBuildInfo())
@@ -125,6 +130,27 @@ function FarmerNodes:ToggleBothIcons()
 	profile.showWorldMap = enable
 	self:OnConfigChanged()
 	self:Print("All map icons: " .. (enable and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
+end
+
+function FarmerNodes:OpenKeybindingsMenu()
+	if InCombatLockdown and InCombatLockdown() then
+		self:Print("Cannot open Keybindings during combat.")
+		return
+	end
+	local AceConfigDialog = LibStub and LibStub("AceConfigDialog-3.0", true)
+	if AceConfigDialog and AceConfigDialog.OpenFrames["FarmerNodes"] then
+		AceConfigDialog:Close("FarmerNodes")
+	end
+	if Settings and Settings.OpenToCategory and Settings.KEYBINDINGS_CATEGORY_ID then
+		Settings.OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID)
+	elseif SettingsPanel and SettingsPanel.OpenToCategory and Settings.KEYBINDINGS_CATEGORY_ID then
+		SettingsPanel:OpenToCategory(Settings.KEYBINDINGS_CATEGORY_ID)
+	elseif KeyBindingFrame_LoadUI then
+		KeyBindingFrame_LoadUI()
+		ShowUIPanel(KeyBindingFrame)
+	elseif KeyBindingFrame then
+		ShowUIPanel(KeyBindingFrame)
+	end
 end
 
 function FarmerNodes:UpdateMinimapButtonState()
