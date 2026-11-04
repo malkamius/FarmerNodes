@@ -4,8 +4,8 @@ _G.FarmerNodes = FarmerNodes
 
 -- Keybindings strings
 _G["BINDING_HEADER_FARMERNODES"] = "FarmerNodes"
-_G["BINDING_NAME_FARMERNODES_TOGGLE_MINIMAP"] = "Toggle Minimap Icons"
-_G["BINDING_NAME_FARMERNODES_TOGGLE_WORLDMAP"] = "Toggle World Map Icons"
+_G["BINDING_NAME_FARMERNODES_TOGGLE_MINIMAP"] = "FarmerNodes: Toggle Minimap Icons"
+_G["BINDING_NAME_FARMERNODES_TOGGLE_WORLDMAP"] = "FarmerNodes: Toggle World Map Icons"
 
 FarmerNodes.HBD = LibStub("HereBeDragons-2.0")
 

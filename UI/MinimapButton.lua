@@ -2,8 +2,8 @@ local AddonName, FarmerNodes = ...
 
 -- Localize keybindings headers
 _G["BINDING_HEADER_FARMERNODES"] = "FarmerNodes"
-_G["BINDING_NAME_FARMERNODES_TOGGLE_MINIMAP"] = "Toggle Minimap Icons"
-_G["BINDING_NAME_FARMERNODES_TOGGLE_WORLDMAP"] = "Toggle World Map Icons"
+_G["BINDING_NAME_FARMERNODES_TOGGLE_MINIMAP"] = "FarmerNodes: Toggle Minimap Icons"
+_G["BINDING_NAME_FARMERNODES_TOGGLE_WORLDMAP"] = "FarmerNodes: Toggle World Map Icons"
 
 local LDB = LibStub("LibDataBroker-1.1")
 local DBIcon = LibStub("LibDBIcon-1.0")
