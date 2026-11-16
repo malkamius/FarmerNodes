@@ -40,7 +40,8 @@ function WorldMapModule:OnConfigChanged()
 end
 
 function WorldMapModule:OnDataChanged()
-	if self.WorldMapDataProvider:GetMap() then
+	local map = self.WorldMapDataProvider:GetMap()
+	if map and map:IsShown() then
 		self.WorldMapDataProvider:RefreshAllData()
 	end
 end
@@ -55,6 +56,14 @@ end
 -- ==========================================
 
 WorldMapModule.WorldMapDataProvider = CreateFromMixins(MapCanvasDataProviderMixin)
+
+function WorldMapModule.WorldMapDataProvider:OnShow()
+	self:RefreshAllData(true)
+end
+
+function WorldMapModule.WorldMapDataProvider:OnMapChanged()
+	self:RefreshAllData()
+end
 
 function WorldMapModule.WorldMapDataProvider:RemoveAllData()
 	for _, pin in ipairs(worldmapPins) do
@@ -159,6 +168,10 @@ end
 
 -- World Map Pin Frame Mixin
 FarmerNodesWorldMapPinMixin = CreateFromMixins(MapCanvasPinMixin)
+
+-- Prevent ADDON_ACTION_BLOCKED: Frame:SetPassThroughButtons() during combat lockdown in WoW 10.1.5+
+FarmerNodesWorldMapPinMixin.CheckMouseButtonPassthrough = function() end
+FarmerNodesWorldMapPinMixin.SetPassThroughButtons = function() end
 
 function FarmerNodesWorldMapPinMixin:OnLoad()
 	self:UseFrameLevelType("PIN_FRAME_LEVEL_AREA_POI")
