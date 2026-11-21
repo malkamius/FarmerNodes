@@ -19,9 +19,11 @@ NEXT_COMMIT.txt
 NEXT_CHANGELOG.md
 changelog.txt
 
-# Repo-only docs
+# Repo-only docs & workspace
+docs/
 *.md
 !/README.md
+FarmerNodes.code-workspace
 
 # Legacy folders
 GearEquipperEqManager/

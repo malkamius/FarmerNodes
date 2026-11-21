@@ -1,6 +1,8 @@
 local AddonName, FarmerNodes = ...
 local Collector = FarmerNodes:NewModule("Collector", "AceEvent-3.0")
 
+local issecretvalue = issecretvalue or function() return false end
+
 local spells = {}
 local activeCast = {}
 
@@ -29,16 +31,18 @@ local spellIDToCategory = {
 }
 
 local function GetSpellName(spellID)
-	if not spellID then return nil end
+	if not spellID or issecretvalue(spellID) then return nil end
+	local name
 	if C_Spell and C_Spell.GetSpellName then
-		return C_Spell.GetSpellName(spellID)
+		name = C_Spell.GetSpellName(spellID)
 	elseif C_Spell and C_Spell.GetSpellInfo then
 		local info = C_Spell.GetSpellInfo(spellID)
-		return info and info.name
+		name = info and info.name
 	elseif GetSpellInfo then
-		return (GetSpellInfo(spellID))
+		name = (GetSpellInfo(spellID))
 	end
-	return nil
+	if name and issecretvalue(name) then return nil end
+	return name
 end
 
 function Collector:OnEnable()
@@ -61,7 +65,7 @@ end
 -- Helper to scan tooltip name
 function Collector:GetTooltipNodeName(category)
 	local tooltipText = GameTooltipTextLeft1:GetText()
-	if tooltipText and tooltipText ~= "" then
+	if tooltipText and not issecretvalue(tooltipText) and tooltipText ~= "" then
 		-- Check if it's a known node in the category
 		if FarmerNodes.NodeIDs[category] and FarmerNodes.NodeIDs[category][tooltipText] then
 			return tooltipText
@@ -71,7 +75,7 @@ function Collector:GetTooltipNodeName(category)
 end
 
 function Collector:UNIT_SPELLCAST_SENT(event, unit, target, castGUID, spellID)
-	if unit ~= "player" then return end
+	if issecretvalue(unit) or unit ~= "player" then return end
 
 	local spellName = GetSpellName(spellID)
 	if not spellName then return end
@@ -82,8 +86,8 @@ function Collector:UNIT_SPELLCAST_SENT(event, unit, target, castGUID, spellID)
 	activeCast = {
 		spell = spellName,
 		category = category,
-		target = (target and target ~= "") and target or nil,
-		castGUID = castGUID,
+		target = (target and not issecretvalue(target) and target ~= "") and target or nil,
+		castGUID = (castGUID and not issecretvalue(castGUID)) and castGUID or nil,
 	}
 
 	-- If target is not populated yet, try tooltip immediately
@@ -99,20 +103,23 @@ function Collector:CURSOR_CHANGED()
 end
 
 function Collector:UNIT_SPELLCAST_STOP(event, unit, castGUID, spellID)
-	if unit == "player" and activeCast.category and not activeCast.target then
+	if not issecretvalue(unit) and unit == "player" and activeCast.category and not activeCast.target then
 		activeCast.target = self:GetTooltipNodeName(activeCast.category)
 	end
 end
 
 function Collector:SpellFailed(event, unit, castGUID, spellID)
-	if unit ~= "player" then return end
-	if activeCast.castGUID == castGUID or (spellID and GetSpellName(spellID) == activeCast.spell) then
+	if issecretvalue(unit) or unit ~= "player" then return end
+	local isSameGUID = activeCast.castGUID and castGUID and not issecretvalue(castGUID) and activeCast.castGUID == castGUID
+	local spellName = GetSpellName(spellID)
+	local isSameSpell = spellName and spellName == activeCast.spell
+	if isSameGUID or isSameSpell then
 		activeCast = {}
 	end
 end
 
 function Collector:UNIT_SPELLCAST_SUCCEEDED(event, unit, castGUID, spellID)
-	if unit ~= "player" then return end
+	if issecretvalue(unit) or unit ~= "player" then return end
 
 	local spellName = GetSpellName(spellID)
 	if not spellName then return end
