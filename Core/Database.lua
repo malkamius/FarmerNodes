@@ -529,16 +529,31 @@ function Database:AddNode(zoneID, x, y, category, nodeName)
 	FarmerNodes:SendMessage("FarmerNodes_NodeAdded", zoneID, category, encoded, nodeName)
 end
 
+local DEFAULT_DEDUP_RANGE = 15
+local CATEGORY_DEDUP_RANGE = {
+	["Mining"] = 15,
+	["Herb Gathering"] = 15,
+	["Treasure"] = 15,
+	["Fishing"] = 25,
+	["Extract Gas"] = 25,
+}
+
+local function GetDedupRange(category)
+	return CATEGORY_DEDUP_RANGE[category] or DEFAULT_DEDUP_RANGE
+end
+
 -- Checked database add (checks for duplicates and rare node replacements)
 function Database:AddNodeChecked(zoneID, x, y, category, nodeName)
-	if not zoneID or not x or not y or not category or not nodeName then return false end
-	if FarmerNodes.db.profile.dbLocks[category] then return false end
+	if not zoneID or not x or not y or not category or not nodeName then return false, "invalid_args" end
+	if FarmerNodes.db.profile.dbLocks[category] then return false, "locked" end
 
-	local nodeID = FarmerNodes.NodeIDs[category][nodeName]
-	if not nodeID then return false end
+	local categoryNodes = FarmerNodes.NodeIDs[category]
+	local nodeID = categoryNodes and categoryNodes[nodeName]
+	if not nodeID then return false, "unknown_node" end
 
-	local range = FarmerNodes.db.profile.trackDistance or 15
+	local range = GetDedupRange(category)
 	local skipAdd = false
+	local skipReason
 
 	-- Search for nearby nodes
 	local db = FarmerNodesDB.nodes[category][zoneID]
@@ -555,6 +570,7 @@ function Database:AddNodeChecked(zoneID, x, y, category, nodeName)
 					-- If it's the exact same node type, skip adding
 					if existingID == nodeID then
 						skipAdd = true
+						skipReason = string.format("duplicate(%.1fyd)", math.sqrt(distSq))
 						break
 					end
 
@@ -566,6 +582,7 @@ function Database:AddNodeChecked(zoneID, x, y, category, nodeName)
 					-- If the existing node is a rare spawn that replaces the one we are trying to add, skip adding
 					elseif FarmerNodes.RareNodes[existingID] and FarmerNodes.RareNodes[existingID][nodeID] then
 						skipAdd = true
+						skipReason = "rare_exists"
 						break
 					end
 				end
@@ -575,10 +592,10 @@ function Database:AddNodeChecked(zoneID, x, y, category, nodeName)
 
 	if not skipAdd then
 		self:AddNode(zoneID, x, y, category, nodeName)
-		return true
+		return true, "added"
 	end
 
-	return false
+	return false, skipReason or "skipped"
 end
 
 -- Deletes a node by ID and coordinate
@@ -602,7 +619,7 @@ end
 function Database:SweepDatabase()
 	for category in pairs(FarmerNodes.Categories) do
 		if not FarmerNodes.db.profile.dbLocks[category] then
-			local range = FarmerNodes.db.profile.trackDistance or 15
+			local range = GetDedupRange(category)
 			for zoneID, coords in pairs(FarmerNodesDB.nodes[category]) do
 				local yw, yh = FarmerNodes.HBD:GetZoneSize(zoneID)
 				if yw and yw > 0 and yh and yh > 0 then

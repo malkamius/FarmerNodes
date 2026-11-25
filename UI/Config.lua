@@ -557,8 +557,13 @@ function FarmerNodes:SlashCommand(input)
 	elseif cmd == "sweep" then
 		self.Database:SweepDatabase()
 		self:Print("Database swept and duplicate coordinates successfully removed.")
+	elseif cmd == "debug" then
+		if self.Collector then
+			self.Collector.debug = not self.Collector.debug
+			self:Print("Collector debug logging: " .. (self.Collector.debug and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
+		end
 	else
-		self:Print("Usage: /fn or /farmer (toggles settings), /fn bind (opens keybindings), /fn sweep (cleans coordinates database)")
+		self:Print("Usage: /fn or /farmer (toggles settings), /fn bind (opens keybindings), /fn sweep (cleans coordinates database), /fn debug (toggles collector debug)")
 	end
 end
 
