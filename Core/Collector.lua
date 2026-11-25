@@ -210,7 +210,13 @@ function Collector:TryResolveAndRecord(category, candidateTarget, source)
 		return self:RecordNode(category, targetName, source)
 	end
 
-	return false, "no_target"
+	local reason = (candidateTarget and not issecretvalue(candidateTarget) and candidateTarget ~= "") and "unknown_node" or "no_target"
+	if self.debug and (source == "SENT" or source == "SUCCEEDED") then
+		FarmerNodes:Print(string.format("[Debug] SKIP (%s) cat=%s target=%s reason=%s",
+			tostring(source), FormatDebugValue(category), FormatDebugValue(candidateTarget), reason))
+	end
+
+	return false, reason
 end
 
 function Collector:UNIT_SPELLCAST_SENT(event, unit, target, castGUID, spellID)

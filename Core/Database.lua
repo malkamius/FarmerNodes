@@ -63,6 +63,7 @@ FarmerNodes.NodeIDs = {
 		["Large Obsidian Chunk"] = 225,
 		["Small Obsidian Chunk"] = 226,
 		["Nethercite Deposit"] = 227,
+		["Heavy Thorium Vein"] = 4201,
 	},
 	["Extract Gas"] = {
 		["Windy Cloud"] = 301,
@@ -113,6 +114,8 @@ FarmerNodes.NodeIDs = {
 		["Ragveil"] = 440,
 		["Flame Cap"] = 441,
 		["Netherdust Bush"] = 442,
+		["Demonsage"] = 4401,
+		["Marefoil"] = 4402,
 	},
 	["Treasure"] = {
 		["Giant Clam"] = 501,
@@ -153,6 +156,25 @@ for category, list in pairs(FarmerNodes.NodeIDs) do
 	FarmerNodes.ReverseNodeIDs[category] = {}
 	for name, id in pairs(list) do
 		FarmerNodes.ReverseNodeIDs[category][id] = name
+	end
+end
+
+-- Variant / alias node names that map to an existing canonical node ID
+-- Merged into NodeIDs after ReverseNodeIDs so canonical display names are preserved
+FarmerNodes.NodeAliases = {
+	["Mining"] = {
+		["Poor Copper Vein"] = 201, -- Copper Vein (WoW Forever)
+	},
+	["Herb Gathering"] = {
+		["Wilted Peacebloom"] = 401,  -- Peacebloom (WoW Forever)
+		["Stunted Silverleaf"] = 402, -- Silverleaf (WoW Forever)
+	},
+}
+
+for category, aliases in pairs(FarmerNodes.NodeAliases) do
+	FarmerNodes.NodeIDs[category] = FarmerNodes.NodeIDs[category] or {}
+	for aliasName, id in pairs(aliases) do
+		FarmerNodes.NodeIDs[category][aliasName] = id
 	end
 end
 
@@ -211,6 +233,7 @@ FarmerNodes.NodeIcons = {
 	[223] = "Interface\\Icons\\INV_Ore_Adamantium",
 	[224] = "Interface\\Icons\\INV_Ore_Khorium_01",
 	[227] = "Interface\\Icons\\INV_Ore_Nethercite",
+	[4201] = "Interface\\Icons\\INV_Ore_Thorium_02",
 
 	-- Herbs
 	[401] = "Interface\\Icons\\INV_Misc_Herb_01",
@@ -252,6 +275,8 @@ FarmerNodes.NodeIcons = {
 	[440] = "Interface\\Icons\\INV_Misc_Herb_Ragveil",
 	[441] = "Interface\\Icons\\INV_Misc_Herb_Flamecap",
 	[442] = "Interface\\Icons\\INV_Misc_Herb_Netherdust",
+	[4401] = "Interface\\Icons\\INV_Misc_Herb_MountainSilversage",
+	[4402] = "Interface\\Icons\\INV_Misc_Herb_Dreamfoil",
 
 	-- Fishing
 	[101] = "Interface\\Icons\\INV_Misc_Flotsam_01",
@@ -326,6 +351,7 @@ FarmerNodes.NodeSkillLevels = {
 	[225] = 305,   -- Large Obsidian Chunk
 	[226] = 305,   -- Small Obsidian Chunk
 	[227] = 350,   -- Nethercite Deposit
+	[4201] = 285,  -- Heavy Thorium Vein
 
 	-- Herb Gathering
 	[401] = 1,     -- Peacebloom
@@ -367,6 +393,8 @@ FarmerNodes.NodeSkillLevels = {
 	[440] = 325,   -- Ragveil
 	[441] = 335,   -- Flame Cap
 	[442] = 350,   -- Netherdust Bush
+	[4401] = 300,  -- Demonsage
+	[4402] = 300,  -- Marefoil
 }
 
 FarmerNodes.HighestLevelResourceMap = {}
@@ -526,7 +554,8 @@ function Database:AddNode(zoneID, x, y, category, nodeName)
 
 	-- Dispatch hook event
 	FarmerNodes:DispatchEvent("OnDatabaseUpdated", zoneID, category, encoded, nodeID, "ADD")
-	FarmerNodes:SendMessage("FarmerNodes_NodeAdded", zoneID, category, encoded, nodeName)
+	local canonicalName = FarmerNodes.ReverseNodeIDs[category][nodeID] or nodeName
+	FarmerNodes:SendMessage("FarmerNodes_NodeAdded", zoneID, category, encoded, canonicalName)
 end
 
 local DEFAULT_DEDUP_RANGE = 15
